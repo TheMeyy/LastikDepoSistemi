@@ -45,15 +45,7 @@
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-semibold text-gray-900">Depo Durumu</h2>
             <span class="text-sm text-gray-500">
-                {% if rack_groups %}
-                    {% set total_racks = 0 %}
-                    {% for group in rack_groups %}
-                        {% set total_racks = total_racks + group.racks|length %}
-                    {% endfor %}
-                    {{ total_racks }} adet raf
-                {% else %}
-                    0 adet raf
-                {% endif %}
+                {{ total_racks|default(0) }} adet raf
             </span>
         </div>
         

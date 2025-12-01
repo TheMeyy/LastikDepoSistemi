@@ -19,6 +19,7 @@
             border-bottom: 2px solid #2563eb;
         }
     </style>
+    {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
     <!-- Top Navigation Bar -->
@@ -50,6 +51,9 @@
                     </a>
                     <a href="/raflar" class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/raflar' %}active{% endif %}">
                         Raflar
+                    </a>
+                    <a href="/lastik-etiketleri" class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/lastik-etiketleri' %}active{% endif %}">
+                        Lastik Etiketleri
                     </a>
                 </div>
                 

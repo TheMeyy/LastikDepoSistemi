@@ -48,37 +48,71 @@ def create_tire(tire: TireCreate, db: Session = Depends(get_db)):
     # Set entry date if not provided
     entry_date = tire.giris_tarihi if tire.giris_tarihi else datetime.now()
     
-    db_tire = Tire(
-        musteri_id=tire.musteri_id,
-        marka_id=brand.id,
-        ebat=tire.ebat,
-        mevsim=tire.mevsim,
-        dis_durumu=tire.dis_durumu,
-        not_=tire.not_,
-        raf_id=tire.raf_id,
-        giris_tarihi=entry_date,
-        cikis_tarihi=tire.cikis_tarihi,
-        durum=tire.durum
-    )
-    db.add(db_tire)
+    # Convert durum enum from schema enum to model enum
+    # Schema uses TireDurumEnum from utils.enums (values: "Depoda", "Çıkmış")
+    # Model uses TireDurumEnum from models.models (values: "DEPODA", "CIKTI")
+    # ModelTireDurumEnum is already imported at the top
+    if isinstance(tire.durum, str):
+        if tire.durum.strip() == "Depoda" or tire.durum.strip() == "DEPODA":
+            durum_value = ModelTireDurumEnum.DEPODA
+        elif tire.durum.strip() == "Çıkmış" or tire.durum.strip() == "CIKTI":
+            durum_value = ModelTireDurumEnum.CIKTI
+        else:
+            durum_value = ModelTireDurumEnum.DEPODA  # Default
+    else:
+        # It's an enum instance from schema
+        # Check its value and convert to model enum
+        durum_str = tire.durum.value if hasattr(tire.durum, 'value') else str(tire.durum)
+        if durum_str == "Depoda" or durum_str == "DEPODA":
+            durum_value = ModelTireDurumEnum.DEPODA
+        elif durum_str == "Çıkmış" or durum_str == "CIKTI":
+            durum_value = ModelTireDurumEnum.CIKTI
+        else:
+            durum_value = ModelTireDurumEnum.DEPODA  # Default
     
-    # Update rack status to "Dolu" (Full)
-    rack.durum = RackDurumEnum.DOLU
-    db.add(rack)
-    
-    db.commit()
-    db.refresh(db_tire)
-    
-    # Reload with relationships
-    from sqlalchemy.orm import joinedload
-    db_tire = db.query(Tire).options(
-        joinedload(Tire.brand),
-        joinedload(Tire.customer),
-        joinedload(Tire.rack)
-    ).filter(Tire.id == db_tire.id).first()
-    
-    # Return with relationships loaded
-    return format_tire_response(db_tire, db)
+    try:
+        db_tire = Tire(
+            musteri_id=tire.musteri_id,
+            marka_id=brand.id,
+            ebat=tire.ebat,
+            mevsim=tire.mevsim,
+            dis_durumu=tire.dis_durumu,
+            not_=tire.not_,
+            raf_id=tire.raf_id,
+            giris_tarihi=entry_date,
+            cikis_tarihi=tire.cikis_tarihi,
+            durum=durum_value
+        )
+        db.add(db_tire)
+        
+        # Update rack status to "Dolu" (Full)
+        rack.durum = RackDurumEnum.DOLU
+        db.add(rack)
+        
+        # Commit both changes together (atomic transaction)
+        db.commit()
+        db.refresh(db_tire)
+        
+        # Reload with relationships
+        from sqlalchemy.orm import joinedload
+        db_tire = db.query(Tire).options(
+            joinedload(Tire.brand),
+            joinedload(Tire.customer),
+            joinedload(Tire.rack)
+        ).filter(Tire.id == db_tire.id).first()
+        
+        # Return with relationships loaded
+        return format_tire_response(db_tire, db)
+    except Exception as e:
+        # Rollback on any error to ensure data consistency
+        db.rollback()
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error creating tire: {error_trace}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lastik eklenirken bir hata oluştu: {str(e)}"
+        )
 
 
 @router.get("/", response_model=List[TireRead])

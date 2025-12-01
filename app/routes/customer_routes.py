@@ -66,7 +66,7 @@ def update_customer(
 
 @router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_customer(customer_id: int, db: Session = Depends(get_db)):
-    """Delete a customer (cascade delete will remove related tires)"""
+    """Delete a customer (manually delete related tires to avoid enum issues)"""
     try:
         db_customer = db.query(Customer).filter(Customer.id == customer_id).first()
         if not db_customer:
@@ -77,32 +77,56 @@ def delete_customer(customer_id: int, db: Session = Depends(get_db)):
         
         # Get related tires before deletion to update rack statuses
         from app.models.models import Tire, Rack
-        from app.models.models import TireDurumEnum as ModelTireDurumEnum
         from app.utils.enums import RackDurumEnum
-        from sqlalchemy import func
+        from sqlalchemy import func, cast, String
         
-        related_tires = db.query(Tire).filter(Tire.musteri_id == customer_id).all()
+        # Get rack IDs from tires before deletion (avoid enum reading issues)
+        # Get rack IDs directly without reading enum to avoid conversion errors
+        try:
+            # Get rack IDs directly without reading enum
+            rack_ids_result = db.query(Tire.raf_id).filter(Tire.musteri_id == customer_id).distinct().all()
+            affected_rack_ids = [row[0] for row in rack_ids_result if row[0] is not None]
+        except Exception as e:
+            print(f"Error getting rack IDs: {e}")
+            affected_rack_ids = []
         
-        # Get unique rack IDs that will be affected
-        affected_rack_ids = list(set([tire.raf_id for tire in related_tires if tire.raf_id]))
+        # Delete tires manually first (avoid cascade delete enum issues)
+        # Delete tires directly without loading them (to avoid enum reading)
+        try:
+            # Use bulk delete to avoid loading Tire objects
+            deleted_count = db.query(Tire).filter(Tire.musteri_id == customer_id).delete(synchronize_session=False)
+            print(f"Deleted {deleted_count} tires for customer {customer_id}")
+        except Exception as e:
+            print(f"Error deleting tires: {e}")
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Lastikler silinirken bir hata oluştu: {str(e)}"
+            )
         
-        # Delete customer (cascade will delete tires)
+        # Now delete customer
         db.delete(db_customer)
         db.commit()
         
         # Update rack statuses if needed (check if racks are now empty)
+        # Use string comparison to avoid enum conversion issues
         for rack_id in affected_rack_ids:
-            rack = db.query(Rack).filter(Rack.id == rack_id).first()
-            if rack:
-                # Count remaining tires in this rack with status "DEPODA"
-                remaining_tires_count = db.query(func.count(Tire.id)).filter(
-                    Tire.raf_id == rack_id,
-                    Tire.durum == ModelTireDurumEnum.DEPODA
-                ).scalar()
-                
-                if remaining_tires_count == 0:
-                    rack.durum = RackDurumEnum.BOS
-                    db.add(rack)
+            try:
+                rack = db.query(Rack).filter(Rack.id == rack_id).first()
+                if rack:
+                    # Count remaining tires in this rack with status "DEPODA"
+                    # Use cast to string to avoid enum conversion issues
+                    remaining_tires_count = db.query(func.count(Tire.id)).filter(
+                        Tire.raf_id == rack_id,
+                        cast(Tire.durum, String) == "DEPODA"
+                    ).scalar()
+                    
+                    if remaining_tires_count == 0:
+                        rack.durum = RackDurumEnum.BOS
+                        db.add(rack)
+            except Exception as e:
+                print(f"Error updating rack {rack_id}: {e}")
+                continue  # Continue with next rack
         
         db.commit()
         return None

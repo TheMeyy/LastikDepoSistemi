@@ -76,7 +76,7 @@ class Tire(Base):
     raf_id = Column(Integer, ForeignKey("racks.id"), nullable=False)
     giris_tarihi = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     cikis_tarihi = Column(DateTime(timezone=True), nullable=True)
-    durum = Column(Enum(TireDurumEnum), nullable=False, default=TireDurumEnum.DEPODA)
+    durum = Column(Enum(TireDurumEnum, native_enum=False, length=20), nullable=False, default=TireDurumEnum.DEPODA)
 
     # Relationships
     customer = relationship("Customer", back_populates="tires")

@@ -61,7 +61,8 @@ async def lastik_ara(
 ):
     """Main page - Search and filter tires"""
     try:
-        # Build query
+        # Build query - use text() to avoid enum conversion issues
+        from sqlalchemy import text
         query = db.query(Tire).options(
             joinedload(Tire.brand),
             joinedload(Tire.customer),
@@ -90,7 +91,7 @@ async def lastik_ara(
             status_filter_value = ModelTireDurumEnum.DEPODA
         
         # Apply status filter if needed
-        if apply_status_filter and status_filter_value:
+        if apply_status_filter and status_filter_value is not None:
             query = query.filter(Tire.durum == status_filter_value)
         
         # Apply filters
@@ -133,9 +134,19 @@ async def lastik_ara(
         
         if dis_durumu:
             try:
-                dis_durum_enum = ModelDisDurumuEnum(dis_durumu)
-                query = query.filter(Tire.dis_durumu == dis_durum_enum)
-            except (ValueError, AttributeError) as e:
+                # Try to convert string to enum
+                # ModelDisDurumuEnum values are: "İyi", "Orta", "Kötü"
+                dis_durum_str = dis_durumu.strip()
+                # Try to find matching enum value
+                dis_durum_enum = None
+                for enum_val in ModelDisDurumuEnum:
+                    if enum_val.value == dis_durum_str:
+                        dis_durum_enum = enum_val
+                        break
+                
+                if dis_durum_enum:
+                    query = query.filter(Tire.dis_durumu == dis_durum_enum)
+            except (ValueError, AttributeError, TypeError) as e:
                 # Log error but don't fail - just skip this filter
                 print(f"Error filtering by dis_durumu: {e}")
                 pass
@@ -159,12 +170,120 @@ async def lastik_ara(
         # Order by entry date descending
         query = query.order_by(Tire.giris_tarihi.desc())
         
-        # Get results
-        tires = query.all()
+        # Get results - wrap in try-except to handle enum conversion errors
+        try:
+            tires = query.all()
+            print(f"Successfully got {len(tires)} tires from query")
+        except (LookupError, ValueError, AttributeError) as enum_error:
+            # If enum conversion fails, try to get tires without enum conversion
+            print(f"Enum conversion error: {enum_error}, trying alternative approach")
+            # Use raw SQL to get durum as text
+            from sqlalchemy import text
+            try:
+                # Get tire IDs first
+                tire_ids_query = db.query(Tire.id)
+                # Only apply status filter if needed (not "Tümü")
+                if apply_status_filter and status_filter_value is not None:
+                    tire_ids_query = tire_ids_query.filter(Tire.durum == status_filter_value)
+                # If apply_status_filter is False, don't filter by status (show all)
+                # Apply other filters...
+                if customer_name:
+                    customers = db.query(Customer).filter(
+                        Customer.ad_soyad.ilike(f"%{customer_name}%")
+                    ).all()
+                    if customers:
+                        customer_ids = [c.id for c in customers]
+                        tire_ids_query = tire_ids_query.filter(Tire.musteri_id.in_(customer_ids))
+                    else:
+                        tire_ids_query = tire_ids_query.filter(Tire.id == -1)
+                if plate:
+                    customer = db.query(Customer).filter(Customer.plaka.ilike(f"%{plate}%")).first()
+                    if customer:
+                        tire_ids_query = tire_ids_query.filter(Tire.musteri_id == customer.id)
+                    else:
+                        tire_ids_query = tire_ids_query.filter(Tire.id == -1)
+                if customer_phone:
+                    customers = db.query(Customer).filter(
+                        Customer.telefon.ilike(f"%{customer_phone}%")
+                    ).all()
+                    if customers:
+                        customer_ids = [c.id for c in customers]
+                        tire_ids_query = tire_ids_query.filter(Tire.musteri_id.in_(customer_ids))
+                    else:
+                        tire_ids_query = tire_ids_query.filter(Tire.id == -1)
+                if ebat:
+                    tire_ids_query = tire_ids_query.filter(Tire.ebat.ilike(f"%{ebat}%"))
+                if brand:
+                    brand_obj = db.query(Brand).filter(Brand.marka_adi == brand).first()
+                    if brand_obj:
+                        tire_ids_query = tire_ids_query.filter(Tire.marka_id == brand_obj.id)
+                    else:
+                        tire_ids_query = tire_ids_query.filter(Tire.id == -1)
+                if entry_date_from:
+                    try:
+                        date_from = datetime.fromisoformat(entry_date_from)
+                        tire_ids_query = tire_ids_query.filter(Tire.giris_tarihi >= date_from)
+                    except ValueError:
+                        pass
+                if entry_date_to:
+                    try:
+                        date_to = datetime.fromisoformat(entry_date_to)
+                        tire_ids_query = tire_ids_query.filter(Tire.giris_tarihi <= date_to)
+                    except ValueError:
+                        pass
+                
+                tire_ids_query = tire_ids_query.order_by(Tire.giris_tarihi.desc())
+                tire_ids = [row.id for row in tire_ids_query.all()]
+                print(f"Alternative approach: Found {len(tire_ids)} tire IDs, apply_status_filter={apply_status_filter}")
+                
+                # Now get full Tire objects - handle empty list case
+                if tire_ids:
+                    tires = db.query(Tire).options(
+                        joinedload(Tire.brand),
+                        joinedload(Tire.customer),
+                        joinedload(Tire.rack)
+                    ).filter(Tire.id.in_(tire_ids)).all()
+                    print(f"Alternative approach: Successfully loaded {len(tires)} tires")
+                else:
+                    print("Alternative approach: No tire IDs found, returning empty list")
+                    tires = []
+            except Exception as e2:
+                print(f"Alternative approach also failed: {e2}")
+                tires = []
         
         # Format tire data for template
         tire_list = []
         for tire in tires:
+            # Safely convert tire.durum to display string
+            durum_display = "Depoda"  # Default
+            try:
+                # Use getattr with default to avoid attribute errors
+                durum_raw = getattr(tire, 'durum', None)
+                if durum_raw is None:
+                    durum_display = "Depoda"
+                elif isinstance(durum_raw, ModelTireDurumEnum):
+                    if durum_raw == ModelTireDurumEnum.DEPODA:
+                        durum_display = "Depoda"
+                    elif durum_raw == ModelTireDurumEnum.CIKTI:
+                        durum_display = "Çıkmış"
+                elif isinstance(durum_raw, str):
+                    durum_str = durum_raw.strip().upper()
+                    if durum_str == "DEPODA":
+                        durum_display = "Depoda"
+                    elif durum_str == "CIKTI":
+                        durum_display = "Çıkmış"
+                elif hasattr(durum_raw, 'value'):
+                    durum_value = durum_raw.value
+                    if isinstance(durum_value, str):
+                        durum_str = durum_value.strip().upper()
+                        if durum_str == "DEPODA":
+                            durum_display = "Depoda"
+                        elif durum_str == "CIKTI":
+                            durum_display = "Çıkmış"
+            except Exception as e:
+                print(f"Error converting tire.durum: {e}, type: {type(getattr(tire, 'durum', None))}, value: {getattr(tire, 'durum', None)}")
+                durum_display = "Depoda"
+            
             tire_list.append({
                 "id": tire.id,
                 "customer_name": tire.customer.ad_soyad if tire.customer else "",
@@ -174,7 +293,7 @@ async def lastik_ara(
                 "rack_code": tire.rack.kod if tire.rack else "",
                 "giris_tarihi": tire.giris_tarihi,
                 "cikis_tarihi": tire.cikis_tarihi,
-                "durum": "Depoda" if tire.durum == ModelTireDurumEnum.DEPODA else ("Çıkmış" if tire.durum == ModelTireDurumEnum.CIKTI else (tire.durum.value if hasattr(tire.durum, 'value') else str(tire.durum)))
+                "durum": durum_display
             })
         
         # Prepare query params for template
@@ -272,10 +391,54 @@ async def musteriler(
     customer_list = []
     for c in customers:
         # Get all tires for this customer (both DEPODA and CIKTI)
-        tires = db.query(Tire).filter(Tire.musteri_id == c.id).all()
+        tires = []  # Initialize tires variable
+        depoda_count = 0
+        cikmis_count = 0
         
-        depoda_count = sum(1 for t in tires if t.durum == ModelTireDurumEnum.DEPODA)
-        cikmis_count = sum(1 for t in tires if t.durum == ModelTireDurumEnum.CIKTI)
+        try:
+            tires = db.query(Tire).filter(Tire.musteri_id == c.id).all()
+            
+            # Safely count tires by status
+            for t in tires:
+                try:
+                    durum_raw = getattr(t, 'durum', None)
+                    if durum_raw is None:
+                        depoda_count += 1  # Default to depoda
+                    elif isinstance(durum_raw, ModelTireDurumEnum):
+                        if durum_raw == ModelTireDurumEnum.DEPODA:
+                            depoda_count += 1
+                        elif durum_raw == ModelTireDurumEnum.CIKTI:
+                            cikmis_count += 1
+                    elif isinstance(durum_raw, str):
+                        durum_str = durum_raw.strip().upper()
+                        if durum_str == "DEPODA":
+                            depoda_count += 1
+                        elif durum_str == "CIKTI":
+                            cikmis_count += 1
+                        else:
+                            depoda_count += 1  # Default
+                    elif hasattr(durum_raw, 'value'):
+                        durum_value = durum_raw.value
+                        if isinstance(durum_value, str):
+                            durum_str = durum_value.strip().upper()
+                            if durum_str == "DEPODA":
+                                depoda_count += 1
+                            elif durum_str == "CIKTI":
+                                cikmis_count += 1
+                            else:
+                                depoda_count += 1  # Default
+                        else:
+                            depoda_count += 1  # Default
+                    else:
+                        depoda_count += 1  # Default
+                except Exception as e:
+                    print(f"Error counting tire status for customer {c.id}: {e}")
+                    depoda_count += 1  # Default to depoda
+        except Exception as e:
+            print(f"Error getting tires for customer {c.id}: {e}")
+            depoda_count = 0
+            cikmis_count = 0
+            tires = []  # Ensure tires is set even on error
         
         customer_list.append({
             "id": c.id,
@@ -376,11 +539,111 @@ async def raflar(request: Request, db: Session = Depends(get_db)):
         for prefix in sorted(rack_groups.keys())
     ]
     
+    # Calculate total rack count
+    total_racks = len(racks)
+    
     template = templates.get_template("raflar.html")
     return HTMLResponse(content=template.render(
         request=request,
         rack_groups=rack_groups_list,
+        total_racks=total_racks,
         racks=[],  # Keep for backward compatibility
         current_path="/raflar"
     ))
+
+
+@router.get("/lastik-etiketleri", response_class=HTMLResponse)
+async def lastik_etiketleri(request: Request, db: Session = Depends(get_db)):
+    """Lastik Etiketleri page - List recent tires for label creation"""
+    try:
+        # Get all tires ordered by entry date descending (most recent first)
+        # Use try-except to handle enum conversion errors
+        try:
+            query = db.query(Tire).options(
+                joinedload(Tire.brand),
+                joinedload(Tire.customer),
+                joinedload(Tire.rack)
+            ).order_by(Tire.giris_tarihi.desc())
+            
+            # Limit to last 100 tires for performance
+            tires = query.limit(100).all()
+        except (LookupError, ValueError, AttributeError) as enum_error:
+            # If enum conversion fails, get tire IDs first
+            print(f"Enum conversion error in lastik_etiketleri: {enum_error}, trying alternative approach")
+            try:
+                tire_ids_query = db.query(Tire.id).order_by(Tire.giris_tarihi.desc()).limit(100)
+                tire_ids = [row.id for row in tire_ids_query.all()]
+                
+                if tire_ids:
+                    tires = db.query(Tire).options(
+                        joinedload(Tire.brand),
+                        joinedload(Tire.customer),
+                        joinedload(Tire.rack)
+                    ).filter(Tire.id.in_(tire_ids)).all()
+                else:
+                    tires = []
+            except Exception as e2:
+                print(f"Alternative approach also failed: {e2}")
+                tires = []
+        
+        # Format tire data for template
+        tire_list = []
+        for tire in tires:
+            # Safely convert tire.durum to display string
+            durum_display = "Depoda"  # Default
+            try:
+                durum_raw = getattr(tire, 'durum', None)
+                if durum_raw is None:
+                    durum_display = "Depoda"
+                elif isinstance(durum_raw, ModelTireDurumEnum):
+                    if durum_raw == ModelTireDurumEnum.DEPODA:
+                        durum_display = "Depoda"
+                    elif durum_raw == ModelTireDurumEnum.CIKTI:
+                        durum_display = "Çıkmış"
+                elif isinstance(durum_raw, str):
+                    durum_str = durum_raw.strip().upper()
+                    if durum_str == "DEPODA":
+                        durum_display = "Depoda"
+                    elif durum_str == "CIKTI":
+                        durum_display = "Çıkmış"
+                elif hasattr(durum_raw, 'value'):
+                    durum_value = durum_raw.value
+                    if isinstance(durum_value, str):
+                        durum_str = durum_value.strip().upper()
+                        if durum_str == "DEPODA":
+                            durum_display = "Depoda"
+                        elif durum_str == "CIKTI":
+                            durum_display = "Çıkmış"
+            except Exception as e:
+                print(f"Error converting tire.durum in lastik_etiketleri: {e}")
+                durum_display = "Depoda"
+            
+            tire_list.append({
+                "id": tire.id,
+                "customer_name": tire.customer.ad_soyad if tire.customer else "",
+                "customer_phone": tire.customer.telefon if tire.customer else "",
+                "customer_plate": tire.customer.plaka if tire.customer else "",
+                "ebat": tire.ebat,
+                "brand": tire.brand.marka_adi if tire.brand else "",
+                "giris_tarihi": tire.giris_tarihi,
+                "durum": durum_display
+            })
+        
+        template = templates.get_template("lastik_etiketleri.html")
+        return HTMLResponse(content=template.render(
+            request=request,
+            tires=tire_list,
+            current_path="/lastik-etiketleri"
+        ))
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error in lastik_etiketleri endpoint: {error_trace}")
+        # Return empty list on error
+        template = templates.get_template("lastik_etiketleri.html")
+        return HTMLResponse(content=template.render(
+            request=request,
+            tires=[],
+            current_path="/lastik-etiketleri"
+        ))
 

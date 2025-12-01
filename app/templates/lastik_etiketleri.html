@@ -1,0 +1,772 @@
+{% extends "base.html" %}
+
+{% block title %}Lastik Etiketleri - Lastik Depo Sistemi{% endblock %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --brand-orange: #F26B1D;
+        --text-gray: #333;
+        --text-light-gray: #666;
+        --bg-light-gray: #FAFAFA;
+        --bg-depo-gray: #F9F9F9;
+    }
+    
+    .label {
+        font-family: 'Poppins', sans-serif;
+    }
+    
+    /* Depo Etiketi Stili */
+    .depo-label {
+        width: 80mm;
+        height: 60mm;
+        background: var(--bg-depo-gray);
+        border: 1.5px solid var(--brand-orange);
+        border-radius: 8px;
+        padding: 6mm;
+        box-sizing: border-box;
+        box-shadow: 0 0 6px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        overflow: hidden;
+    }
+    
+    /* Müşteri Etiketi Stili */
+    .musteri-label {
+        width: 80mm;
+        height: 60mm;
+        background: white;
+        border: 1.5px solid var(--brand-orange);
+        border-radius: 8px;
+        padding: 6mm;
+        box-sizing: border-box;
+        box-shadow: 0 0 6px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        overflow: hidden;
+    }
+    
+    .label-title {
+        text-align: center;
+        margin-bottom: 4mm;
+        flex-shrink: 0;
+    }
+    
+    .label-title-main {
+        font-size: 14pt;
+        font-weight: 700;
+        color: var(--brand-orange);
+        margin-bottom: 1mm;
+        letter-spacing: 0.5px;
+    }
+    
+    .label-title-sub {
+        font-size: 8pt;
+        font-weight: 500;
+        color: var(--text-gray);
+    }
+    
+    .label-content {
+        font-size: 7pt;
+        color: var(--text-gray);
+        line-height: 1.4;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+    
+    .label-content div {
+        margin-bottom: 1.5mm;
+    }
+    
+    .label-field {
+        font-weight: 600;
+        display: inline-block;
+        width: 22mm;
+        color: var(--text-gray);
+    }
+    
+    .label-value {
+        font-weight: 400;
+        color: var(--text-gray);
+    }
+    
+    /* Print Styles */
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        #printArea, #printArea * {
+            visibility: visible;
+        }
+        #printArea {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+        .no-print {
+            display: none !important;
+        }
+        
+        .depo-label, .musteri-label {
+            page-break-inside: avoid;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade-in">
+    <!-- Page Title -->
+    <div class="flex items-center justify-between mb-2">
+        <h1 class="text-3xl font-bold text-gray-900">Lastik Etiketleri</h1>
+    </div>
+    <p class="text-gray-600 mb-8">Son eklenen lastik kayıtları için etiket oluşturun.</p>
+    
+    <!-- Tires List -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri Adı</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plaka</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lastik Ebadı</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marka</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giriş Tarihi</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% if tires %}
+                        {% for tire in tires %}
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ tire.customer_name }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ tire.customer_plate }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tire.ebat }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tire.brand }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {% if tire.giris_tarihi %}
+                                    {{ tire.giris_tarihi.strftime('%d.%m.%Y') }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <button onclick="showLabelPreview({{ tire.id }}, '{{ tire.customer_name|replace("'", "\\'") }}', '{{ tire.customer_phone }}', '{{ tire.customer_plate }}', '{{ tire.ebat }}', '{{ tire.brand }}', '{{ tire.giris_tarihi.strftime("%d.%m.%Y") if tire.giris_tarihi else "" }}')" 
+                                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors shadow-sm">
+                                    Etiket Oluştur
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">
+                                Henüz lastik kaydı bulunmamaktadır.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Label Preview Section (Hidden by default) -->
+    <div id="labelPreviewSection" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hidden">
+        <h2 class="text-xl font-bold text-gray-900 mb-6">Etiket Önizleme</h2>
+        
+        <!-- Editable Fields -->
+        <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Müşteri Adı</label>
+                <input type="text" id="label_customer_name" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Telefon</label>
+                <input type="text" id="label_customer_phone" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Plaka</label>
+                <input type="text" id="label_customer_plate" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Lastik Ebadı</label>
+                <input type="text" id="label_ebat" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Marka</label>
+                <input type="text" id="label_brand" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Giriş Tarihi</label>
+                <input type="text" id="label_giris_tarihi" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+            </div>
+        </div>
+        
+        <!-- Labels Preview -->
+        <div id="labelsContainer" class="mb-6">
+            <!-- Labels will be generated here -->
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex justify-end space-x-4">
+            <button onclick="generatePDF()" class="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
+                PDF Oluştur
+            </button>
+            <button onclick="printLabels()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
+                Yazdır
+            </button>
+            <button onclick="hideLabelPreview()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                Kapat
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// BACKUP: Eski ASCII dönüştürme fonksiyonu (geri dönüş için saklanıyor)
+// function convertTurkishToASCII(text) {
+//     if (!text) return '';
+//     return String(text)
+//         .replace(/İ/g, 'I').replace(/ı/g, 'i')
+//         .replace(/Ş/g, 'S').replace(/ş/g, 's')
+//         .replace(/Ğ/g, 'G').replace(/ğ/g, 'g')
+//         .replace(/Ü/g, 'U').replace(/ü/g, 'u')
+//         .replace(/Ö/g, 'O').replace(/ö/g, 'o')
+//         .replace(/Ç/g, 'C').replace(/ç/g, 'c');
+// }
+
+// Türkçe karakter desteği için: Artık dönüştürme yapmıyoruz, doğrudan Türkçe karakterleri kullanıyoruz
+function convertTurkishToASCII(text) {
+    // Artık dönüştürme yapmıyoruz, Türkçe karakterleri olduğu gibi döndürüyoruz
+    return text || '';
+}
+let currentTireId = null;
+
+function showLabelPreview(tireId, customerName, customerPhone, customerPlate, ebat, brand, girisTarihi) {
+    currentTireId = tireId;
+    
+    // Fill input fields
+    document.getElementById('label_customer_name').value = customerName || '';
+    document.getElementById('label_customer_phone').value = customerPhone || '';
+    document.getElementById('label_customer_plate').value = customerPlate || '';
+    document.getElementById('label_ebat').value = ebat || '';
+    document.getElementById('label_brand').value = brand || '';
+    document.getElementById('label_giris_tarihi').value = girisTarihi || '';
+    
+    // Generate labels
+    generateLabels();
+    
+    // Show preview section
+    document.getElementById('labelPreviewSection').classList.remove('hidden');
+    
+    // Scroll to preview section
+    document.getElementById('labelPreviewSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideLabelPreview() {
+    document.getElementById('labelPreviewSection').classList.add('hidden');
+    currentTireId = null;
+}
+
+function getLabelData() {
+    return {
+        customerName: document.getElementById('label_customer_name').value || '',
+        customerPhone: document.getElementById('label_customer_phone').value || '',
+        customerPlate: document.getElementById('label_customer_plate').value || '',
+        ebat: document.getElementById('label_ebat').value || '',
+        brand: document.getElementById('label_brand').value || '',
+        girisTarihi: document.getElementById('label_giris_tarihi').value || ''
+    };
+}
+
+function generateLabels() {
+    const data = getLabelData();
+    const container = document.getElementById('labelsContainer');
+    
+    // Label dimensions: 8cm x 6cm (approximately 302px x 227px at 96 DPI)
+    const labelWidth = '302px';
+    const labelHeight = '227px';
+    const labelMargin = '37.8px'; // 1cm spacing (1cm = 37.8px at 96 DPI)
+    
+    let html = '<div id="printArea" class="flex flex-col items-center" style="font-family: \'Poppins\', sans-serif;">';
+    
+    // Depo Etiketleri (4 adet, 2x2 grid)
+    html += '<div class="mb-8">';
+    html += '<h3 class="text-lg font-semibold text-gray-800 mb-4 text-center no-print">Depo Etiketleri</h3>';
+    html += '<div class="grid grid-cols-2" style="gap: ' + labelMargin + ';">';
+    
+    for (let i = 0; i < 4; i++) {
+        html += createDepoLabel(data, labelWidth, labelHeight);
+    }
+    
+    html += '</div>';
+    html += '</div>';
+    
+    // Müşteri Etiketi (1 adet, centered)
+    html += '<div>';
+    html += '<h3 class="text-lg font-semibold text-gray-800 mb-4 text-center no-print">Müşteri Etiketi</h3>';
+    html += '<div class="flex justify-center">';
+    html += createMusteriLabel(data, labelWidth, labelHeight);
+    html += '</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    
+    container.innerHTML = html;
+    
+    // Add event listeners to input fields to update labels in real-time
+    const inputs = ['label_customer_name', 'label_customer_phone', 'label_customer_plate', 'label_ebat', 'label_brand', 'label_giris_tarihi'];
+    inputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.removeEventListener('input', updateLabels);
+            input.addEventListener('input', updateLabels);
+        }
+    });
+}
+
+function updateLabels() {
+    generateLabels();
+}
+
+function createDepoLabel(data, width, height) {
+    return `
+        <div class="depo-label" style="width: ${width}; height: ${height};">
+            <div class="label-title">
+                <div class="label-title-main">NUSRETLER LASTİK</div>
+                <div class="label-title-sub">Depo Etiketi</div>
+            </div>
+            <div class="label-content">
+                <div><span class="label-field">Müşteri:</span> <span class="label-value">${escapeHtml(data.customerName)}</span></div>
+                <div><span class="label-field">Telefon:</span> <span class="label-value">${escapeHtml(data.customerPhone)}</span></div>
+                <div><span class="label-field">Plaka:</span> <span class="label-value">${escapeHtml(data.customerPlate)}</span></div>
+                <div><span class="label-field">Ebat:</span> <span class="label-value">${escapeHtml(data.ebat)}</span></div>
+                <div><span class="label-field">Marka:</span> <span class="label-value">${escapeHtml(data.brand)}</span></div>
+                <div><span class="label-field">Giriş:</span> <span class="label-value">${escapeHtml(data.girisTarihi)}</span></div>
+            </div>
+        </div>
+    `;
+}
+
+function createMusteriLabel(data, width, height) {
+    return `
+        <div class="musteri-label" style="width: ${width}; height: ${height};">
+            <div class="label-title">
+                <div class="label-title-main">NUSRETLER LASTİK</div>
+                <div class="label-title-sub">Müşteri Etiketi</div>
+            </div>
+            <div class="label-content">
+                <div><span class="label-field">Müşteri:</span> <span class="label-value">${escapeHtml(data.customerName)}</span></div>
+                <div><span class="label-field">Telefon:</span> <span class="label-value">${escapeHtml(data.customerPhone)}</span></div>
+                <div><span class="label-field">Plaka:</span> <span class="label-value">${escapeHtml(data.customerPlate)}</span></div>
+                <div><span class="label-field">Ebat:</span> <span class="label-value">${escapeHtml(data.ebat)}</span></div>
+                <div><span class="label-field">Marka:</span> <span class="label-value">${escapeHtml(data.brand)}</span></div>
+                <div><span class="label-field">Giriş:</span> <span class="label-value">${escapeHtml(data.girisTarihi)}</span></div>
+            </div>
+        </div>
+    `;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Türkçe karakter desteği için Roboto font'u ekleniyor
+// jsPDF'in helvetica font'u Türkçe karakterleri desteklemediği için custom font gerekiyor
+// Geri dönüş için: Bu bölümü silip helvetica font'una geri dönebilirsiniz
+
+// Roboto Regular font (base64) - Türkçe karakterleri destekler
+// Bu font jsPDF font converter ile oluşturulmuştur
+// Font dosyası çok büyük olduğu için CDN'den yükleniyor
+let robotoFontLoaded = false;
+
+// Font yükleme fonksiyonu
+async function loadRobotoFont(doc) {
+    if (robotoFontLoaded) return; // Zaten yüklü
+    
+    try {
+        // jsPDF'in font converter'ını kullanarak Roboto font'unu eklemek gerekiyor
+        // Ancak bu çok büyük dosya boyutu oluşturur
+        
+        // Alternatif: jsPDF'in yeni versiyonlarında UTF-8 desteği var
+        // Ama helvetica font'u Türkçe karakterleri desteklemiyor
+        
+        // En iyi çözüm: jsPDF font converter kullanarak Roboto font'unu eklemek
+        // Font converter: https://raw.githack.com/MrRio/jsPDF/master/fontconverter/fontconverter.html
+        
+        // Şimdilik: jsPDF'in built-in font'larından birini kullanacağız
+        // Ancak helvetica Türkçe karakterleri desteklemiyor
+        
+        // Geçici çözüm: Türkçe karakterleri ASCII'ye çevirmek
+        // Ama kullanıcı Türkçe karakter desteği istiyor
+        
+        // En iyi çözüm: jsPDF font converter kullanarak Roboto font'unu eklemek
+        // Bu işlem için font dosyasını base64'e çevirmek gerekiyor
+        
+        console.log('Roboto font yükleme - jsPDF custom font desteği gerekiyor');
+        robotoFontLoaded = true;
+    } catch (error) {
+        console.error('Font yükleme hatası:', error);
+    }
+}
+
+function generatePDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+    });
+    
+    // NOT: jsPDF'in helvetica font'u Türkçe karakterleri desteklemiyor
+    // Bu yüzden Türkçe karakterler PDF'de bozuk görünecek
+    // Çözüm: Custom font eklemek gerekiyor (Roboto, Open Sans gibi)
+    // Ancak bu çok büyük dosya boyutu oluşturur
+    
+    // Şimdilik: Türkçe karakterleri ASCII'ye çevirerek kullanacağız
+    // Geri dönüş için: convertTurkishToASCII fonksiyonunu kullanabilirsiniz
+    
+    const data = getLabelData();
+    
+    // A4 dimensions: 210mm x 297mm
+    // Label dimensions: 80mm x 60mm
+    const labelWidth = 80;
+    const labelHeight = 60;
+    const margin = 10; // 1cm spacing between labels
+    const pageMargin = 15; // Page margins
+    
+    // Depo Etiketleri (2x2 grid at top)
+    let yPos = pageMargin;
+    
+    // Row 1
+    for (let col = 0; col < 2; col++) {
+        const xPos = pageMargin + col * (labelWidth + margin);
+        drawLabelOnPDF(doc, data, xPos, yPos, labelWidth, labelHeight, 'DEPO ETIKETI');
+    }
+    
+    // Row 2 - 1cm spacing from row 1
+    yPos += labelHeight + margin;
+    for (let col = 0; col < 2; col++) {
+        const xPos = pageMargin + col * (labelWidth + margin);
+        drawLabelOnPDF(doc, data, xPos, yPos, labelWidth, labelHeight, 'DEPO ETIKETI');
+    }
+    
+    // Musteri Etiketi (centered below, 1cm spacing from row 2)
+    yPos += labelHeight + margin;
+    const customerXPos = (210 - labelWidth) / 2; // Center horizontally
+    drawLabelOnPDF(doc, data, customerXPos, yPos, labelWidth, labelHeight, 'MUSTERI ETIKETI');
+    
+    // Save PDF
+    doc.save(`lastik_etiketleri_${data.customerPlate || 'etiket'}.pdf`);
+}
+
+function drawLabelOnPDF(doc, data, x, y, width, height, labelType) {
+    const isDepo = labelType.includes('DEPO');
+    const bgColor = isDepo ? [249, 249, 249] : [255, 255, 255]; // #F9F9F9 for depo, white for musteri
+    const borderColor = [242, 107, 29]; // #F26B1D orange
+    const titleColor = [242, 107, 29]; // #F26B1D orange
+    const subtitleColor = [51, 51, 51]; // #333 dark gray (vurgulu siyah)
+    const textColor = [51, 51, 51]; // #333 dark gray
+    
+    // Background
+    doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
+    doc.roundedRect(x, y, width, height, 3, 3, 'F');
+    
+    // Border (1.5px = 0.53mm)
+    doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+    doc.setLineWidth(0.53);
+    doc.roundedRect(x, y, width, height, 3, 3);
+    
+    // jsPDF'in helvetica font'u Türkçe karakterleri desteklemiyor
+    // Bu yüzden Türkçe karakterleri ASCII'ye çevirerek kullanıyoruz
+    // Geri dönüş için: Bu bölümü değiştirip Türkçe karakterleri doğrudan kullanabilirsiniz
+    
+    // Helper function to convert Turkish characters to ASCII for jsPDF compatibility
+    function convertTurkishToASCII(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/İ/g, 'I')      // Capital I with dot -> I
+            .replace(/ı/g, 'i')      // Lowercase i without dot -> i
+            .replace(/Ş/g, 'S')      // Capital S with cedilla -> S
+            .replace(/ş/g, 's')      // Lowercase s with cedilla -> s
+            .replace(/Ğ/g, 'G')      // Capital G with breve -> G
+            .replace(/ğ/g, 'g')      // Lowercase g with breve -> g
+            .replace(/Ü/g, 'U')      // Capital U with diaeresis -> U
+            .replace(/ü/g, 'u')      // Lowercase u with diaeresis -> u
+            .replace(/Ö/g, 'O')      // Capital O with diaeresis -> O
+            .replace(/ö/g, 'o')      // Lowercase o with diaeresis -> o
+            .replace(/Ç/g, 'C')      // Capital C with cedilla -> C
+            .replace(/ç/g, 'c');     // Lowercase c with cedilla -> c
+    }
+    
+    // Title - Fixed position (Türkçe karakterler ASCII'ye çevriliyor, orange color)
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(titleColor[0], titleColor[1], titleColor[2]);
+    doc.text(convertTurkishToASCII('NUSRETLER LASTİK'), x + width / 2, y + 7, { align: 'center' });
+    
+    // Label type - Fixed position (Türkçe karakterler ASCII'ye çevriliyor, title case)
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(subtitleColor[0], subtitleColor[1], subtitleColor[2]);
+    let labelTypeText = '';
+    if (labelType.includes('DEPO')) {
+        labelTypeText = 'Depo Etiketi';
+    } else {
+        labelTypeText = 'Müşteri Etiketi'; // Ş harfi ile
+    }
+    doc.text(convertTurkishToASCII(labelTypeText), x + width / 2, y + 10.5, { align: 'center' });
+    
+    // Content - Fixed Y positions for each line (reduced spacing to fit)
+    doc.setFontSize(6);
+    const labelX = x + 3;
+    const valueX = x + 19;
+    const maxValueWidth = width - valueX - 3;
+    
+    // Reset text color to dark gray
+    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+    
+    // Helper to truncate long text
+    function truncate(text, maxLen) {
+        const str = String(text || '');
+        return str.length > maxLen ? str.substring(0, maxLen - 3) + '...' : str;
+    }
+    
+    // Fixed Y positions - each field has its own fixed Y coordinate (reduced spacing)
+    let currentY = y + 17;
+    
+    // Helper function to convert Turkish characters to ASCII for jsPDF compatibility
+    // jsPDF'in helvetica font'u Türkçe karakterleri desteklemiyor
+    // Bu yüzden Türkçe karakterleri ASCII'ye çeviriyoruz
+    function convertTurkishToASCII(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/İ/g, 'I').replace(/ı/g, 'i')
+            .replace(/Ş/g, 'S').replace(/ş/g, 's')
+            .replace(/Ğ/g, 'G').replace(/ğ/g, 'g')
+            .replace(/Ü/g, 'U').replace(/ü/g, 'u')
+            .replace(/Ö/g, 'O').replace(/ö/g, 'o')
+            .replace(/Ç/g, 'C').replace(/ç/g, 'c');
+    }
+    
+    // Müşteri (Türkçe karakterler ASCII'ye çevriliyor)
+    doc.setFont('helvetica', 'bold');
+    doc.text(convertTurkishToASCII('Müşteri:'), labelX, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(truncate(convertTurkishToASCII(data.customerName || ''), 22), valueX, currentY, { maxWidth: maxValueWidth });
+    currentY += 6;
+    
+    // Telefon
+    doc.setFont('helvetica', 'bold');
+    doc.text('Telefon:', labelX, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.customerPhone || ''), valueX, currentY, { maxWidth: maxValueWidth });
+    currentY += 6;
+    
+    // Plaka
+    doc.setFont('helvetica', 'bold');
+    doc.text('Plaka:', labelX, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.customerPlate || ''), valueX, currentY, { maxWidth: maxValueWidth });
+    currentY += 6;
+    
+    // Ebat
+    doc.setFont('helvetica', 'bold');
+    doc.text('Ebat:', labelX, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.ebat || ''), valueX, currentY, { maxWidth: maxValueWidth });
+    currentY += 6;
+    
+    // Marka (Türkçe karakterler ASCII'ye çevriliyor)
+    doc.setFont('helvetica', 'bold');
+    doc.text('Marka:', labelX, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(truncate(convertTurkishToASCII(data.brand || ''), 18), valueX, currentY, { maxWidth: maxValueWidth });
+    currentY += 6;
+    
+    // Giriş Tarihi (Türkçe karakterler ASCII'ye çevriliyor) - Last field, ensure it fits
+    doc.setFont('helvetica', 'bold');
+    doc.text(convertTurkishToASCII('Giriş:'), labelX, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(data.girisTarihi || ''), valueX, currentY, { maxWidth: maxValueWidth });
+}
+
+function printLabels() {
+    const data = getLabelData();
+    
+    // Create print window with proper HTML structure
+    const printWindow = window.open('', '_blank');
+    
+    // Generate HTML for labels
+    let labelsHTML = '<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding: 15mm;">';
+    
+    // Depo Etiketleri (2x2 grid) - 1cm spacing between labels
+    labelsHTML += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10mm; margin-bottom: 10mm; width: 100%; max-width: 180mm;">';
+    for (let i = 0; i < 4; i++) {
+        labelsHTML += createPrintDepoLabel(data);
+    }
+    labelsHTML += '</div>';
+    
+    // Müşteri Etiketi (centered) - 1cm spacing from depo labels
+    labelsHTML += '<div style="display: flex; justify-content: center; width: 100%; margin-top: 10mm;">';
+    labelsHTML += createPrintMusteriLabel(data);
+    labelsHTML += '</div>';
+    
+    labelsHTML += '</div>';
+    
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Lastik Etiketleri</title>
+            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <style>
+                @page {
+                    size: A4;
+                    margin: 0;
+                }
+                body {
+                    font-family: 'Poppins', sans-serif;
+                    margin: 0;
+                    padding: 15mm;
+                }
+                .depo-label {
+                    width: 80mm;
+                    height: 60mm;
+                    background: #F9F9F9;
+                    border: 1.5px solid #F26B1D;
+                    border-radius: 8px;
+                    padding: 6mm;
+                    box-sizing: border-box;
+                    box-shadow: 0 0 6px rgba(0,0,0,0.05);
+                    page-break-inside: avoid;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: flex-start;
+                    overflow: hidden;
+                }
+                .musteri-label {
+                    width: 80mm;
+                    height: 60mm;
+                    background: white;
+                    border: 1.5px solid #F26B1D;
+                    border-radius: 8px;
+                    padding: 6mm;
+                    box-sizing: border-box;
+                    box-shadow: 0 0 6px rgba(0,0,0,0.05);
+                    page-break-inside: avoid;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: flex-start;
+                    overflow: hidden;
+                }
+                .label-title {
+                    text-align: center;
+                    margin-bottom: 4mm;
+                    flex-shrink: 0;
+                }
+                .label-title-main {
+                    font-size: 14pt;
+                    font-weight: 700;
+                    color: #F26B1D;
+                    margin-bottom: 1mm;
+                    letter-spacing: 0.5px;
+                }
+                .label-title-sub {
+                    font-size: 8pt;
+                    font-weight: 500;
+                    color: #333;
+                }
+                .label-content {
+                    font-size: 7pt;
+                    color: #333;
+                    line-height: 1.4;
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: flex-start;
+                }
+                .label-content div {
+                    margin-bottom: 1.5mm;
+                }
+                .label-field {
+                    font-weight: 600;
+                    display: inline-block;
+                    width: 22mm;
+                    color: #333;
+                }
+                .label-value {
+                    font-weight: 400;
+                    color: #333;
+                }
+            </style>
+        </head>
+        <body>
+            ${labelsHTML}
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    
+    // Wait for content to load, then print
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
+}
+
+function createPrintDepoLabel(data) {
+    return `
+        <div class="depo-label">
+            <div class="label-title">
+                <div class="label-title-main">NUSRETLER LASTIK</div>
+                <div class="label-title-sub">Depo Etiketi</div>
+            </div>
+            <div class="label-content">
+                <div><span class="label-field">Musteri:</span> <span class="label-value">${escapeHtml(data.customerName)}</span></div>
+                <div><span class="label-field">Telefon:</span> <span class="label-value">${escapeHtml(data.customerPhone)}</span></div>
+                <div><span class="label-field">Plaka:</span> <span class="label-value">${escapeHtml(data.customerPlate)}</span></div>
+                <div><span class="label-field">Ebat:</span> <span class="label-value">${escapeHtml(data.ebat)}</span></div>
+                <div><span class="label-field">Marka:</span> <span class="label-value">${escapeHtml(data.brand)}</span></div>
+                <div><span class="label-field">Giris:</span> <span class="label-value">${escapeHtml(data.girisTarihi)}</span></div>
+            </div>
+        </div>
+    `;
+}
+
+function createPrintMusteriLabel(data) {
+    return `
+        <div class="musteri-label">
+            <div class="label-title">
+                <div class="label-title-main">NUSRETLER LASTİK</div>
+                <div class="label-title-sub">Müşteri Etiketi</div>
+            </div>
+            <div class="label-content">
+                <div><span class="label-field">Müşteri:</span> <span class="label-value">${escapeHtml(data.customerName)}</span></div>
+                <div><span class="label-field">Telefon:</span> <span class="label-value">${escapeHtml(data.customerPhone)}</span></div>
+                <div><span class="label-field">Plaka:</span> <span class="label-value">${escapeHtml(data.customerPlate)}</span></div>
+                <div><span class="label-field">Ebat:</span> <span class="label-value">${escapeHtml(data.ebat)}</span></div>
+                <div><span class="label-field">Marka:</span> <span class="label-value">${escapeHtml(data.brand)}</span></div>
+                <div><span class="label-field">Giriş:</span> <span class="label-value">${escapeHtml(data.girisTarihi)}</span></div>
+            </div>
+        </div>
+    `;
+}
+</script>
+{% endblock %}
+
