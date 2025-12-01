@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}Lastik Ara - Lastik Depo Sistemi{% endblock %}
+
+{% block content %}
+<div class="animate-fade-in">
+    <!-- Page Title -->
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Lastik Arama ve Depo Durumu</h1>
+    
+    <!-- Search and Filter Form -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <form id="filterForm" method="GET" action="/lastik-ara" class="space-y-4">
+            <!-- First Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="relative">
+                    <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-1.5">Müşteri Adı / Soyadı</label>
+                    <div class="relative">
+                        <input type="text" id="customer_name" name="customer_name" 
+                               value="{{ query_params.customer_name }}" 
+                               class="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                               placeholder="Müşteri adı ara...">
+                        <svg class="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="plate" class="block text-sm font-medium text-gray-700 mb-1.5">Plaka</label>
+                    <input type="text" id="plate" name="plate" 
+                           value="{{ query_params.plate }}" 
+                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                           placeholder="34ABC123">
+                </div>
+                
+                <div class="relative">
+                    <label for="customer_phone" class="block text-sm font-medium text-gray-700 mb-1.5">Telefon</label>
+                    <div class="relative">
+                        <input type="text" id="customer_phone" name="customer_phone" 
+                               value="{{ query_params.customer_phone }}"
+                               class="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                               placeholder="Telefon">
+                        <svg class="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                        </svg>
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="ebat" class="block text-sm font-medium text-gray-700 mb-1.5">Lastik Ebatı</label>
+                    <select id="ebat" name="ebat" 
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10">
+                        <option value="">Tümü</option>
+                        {% for size in tire_sizes %}
+                        <option value="{{ size }}" {% if query_params.ebat == size %}selected{% endif %}>
+                            {{ size }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Second Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label for="brand" class="block text-sm font-medium text-gray-700 mb-1.5">Marka</label>
+                    <select id="brand" name="brand" 
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10">
+                        <option value="">Tüm Markalar</option>
+                        {% for brand in brands %}
+                        <option value="{{ brand }}" {% if query_params.brand == brand %}selected{% endif %}>
+                            {{ brand }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1.5">Durum</label>
+                    <select id="status" name="status" 
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10">
+                        <option value="Depoda" {% if not query_params.status or query_params.status == '' or query_params.status == 'Depoda' %}selected{% endif %}>Depoda</option>
+                        <option value="Tümü" {% if query_params.status == 'Tümü' %}selected{% endif %}>Tümü</option>
+                        <option value="Çıkmış" {% if query_params.status == 'Çıkmış' %}selected{% endif %}>Çıkmış</option>
+                    </select>
+                </div>
+                
+                <div class="relative">
+                    <label for="entry_date_from" class="block text-sm font-medium text-gray-700 mb-1.5">Giriş Tarihi</label>
+                    <div class="relative">
+                        <input type="date" id="entry_date_from" name="entry_date_from" 
+                               value="{{ query_params.entry_date_from }}"
+                               class="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                        <svg class="absolute left-3 top-9 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                </div>
+                
+                <div class="relative">
+                    <label for="entry_date_to" class="block text-sm font-medium text-gray-700 mb-1.5">Çıkış Tarihi</label>
+                    <div class="relative">
+                        <input type="date" id="entry_date_to" name="entry_date_to" 
+                               value="{{ query_params.entry_date_to }}"
+                               class="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                        <svg class="absolute left-3 top-9 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex justify-end items-center space-x-3 pt-2">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm hover:shadow-md">
+                    Ara
+                </button>
+                <a href="/lastik-ara" class="bg-white border border-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
+                    Filtreleri Temizle
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Results Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-gray-900">Sonuçlar</h2>
+            <span class="text-sm text-gray-500">{{ tires|length }} adet bulundu</span>
+        </div>
+        
+        {% if tires %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri Adı</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plaka</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lastik Ebatı</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marka</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Raf Kodu</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giriş Tarihi</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Çıkış Tarihi</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for tire in tires %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ tire.customer_name }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ tire.customer_plate }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ tire.ebat }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600">{{ tire.brand }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">{{ tire.rack_code }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tire.giris_tarihi.strftime('%d.%m.%Y') if tire.giris_tarihi else '-' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tire.cikis_tarihi.strftime('%d.%m.%Y') if tire.cikis_tarihi else '-' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if tire.durum == 'Depoda' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                {{ tire.durum }}
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ tire.durum }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if tire.durum == 'Depoda' %}
+                            <button onclick="showExitModal({{ tire.id }})" class="text-red-600 hover:text-red-800 font-medium">
+                                Çıkış Yap
+                            </button>
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="text-gray-500 text-sm">Sonuç bulunamadı. Filtreleri değiştirip tekrar deneyin.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Exit Confirmation Modal -->
+<div id="exitModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+        <div class="flex items-center space-x-4 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </div>
+            <div class="flex-1">
+                <h3 class="text-lg font-semibold text-gray-900">Lastik Çıkışı</h3>
+                <p class="text-sm text-gray-600 mt-1">Bu lastiği depodan çıkarmak istediğinize emin misiniz?</p>
+            </div>
+        </div>
+        <div class="flex justify-end space-x-3 mt-6">
+            <button onclick="hideExitModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                İptal
+            </button>
+            <button id="confirmExitBtn" onclick="confirmExit()" class="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
+                Çıkış Yap
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentTireId = null;
+
+function showExitModal(tireId) {
+    currentTireId = tireId;
+    document.getElementById('exitModal').classList.remove('hidden');
+}
+
+function hideExitModal() {
+    document.getElementById('exitModal').classList.add('hidden');
+    currentTireId = null;
+}
+
+function confirmExit() {
+    if (currentTireId) {
+        exitTire(currentTireId);
+    }
+}
+
+function showErrorModal(message) {
+    const errorModal = document.createElement('div');
+    errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    errorModal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+            <div class="flex items-center space-x-4 mb-4">
+                <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
+                    <p class="text-sm text-gray-600 mt-1">${message}</p>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                    Kapat
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(errorModal);
+}
+
+async function exitTire(tireId) {
+    hideExitModal();
+    
+    try {
+        const tireResponse = await fetch(`/api/tires/${tireId}`);
+        if (!tireResponse.ok) {
+            const errorText = await tireResponse.text();
+            console.error('Error fetching tire:', errorText);
+            showErrorModal('Lastik bilgileri alınamadı. Lütfen sayfayı yenileyip tekrar deneyin.');
+            return;
+        }
+        
+        const tire = await tireResponse.json();
+        
+        // Format dates properly
+        const girisTarihi = tire.giris_tarihi ? new Date(tire.giris_tarihi).toISOString() : null;
+        const cikisTarihi = new Date().toISOString();
+        
+        const updateData = {
+            musteri_id: tire.musteri_id,
+            brand: tire.brand,
+            ebat: tire.ebat,
+            mevsim: tire.mevsim,
+            dis_durumu: tire.dis_durumu,
+            not: tire.not_ || null,
+            raf_id: tire.raf_id,
+            giris_tarihi: girisTarihi,
+            cikis_tarihi: cikisTarihi,
+            durum: "CIKTI"
+        };
+        
+        const response = await fetch(`/api/tires/${tireId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updateData)
+        });
+        
+        if (response.ok) {
+            // Show success message
+            const successModal = document.createElement('div');
+            successModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            successModal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                    <div class="flex items-center space-x-4 mb-4">
+                        <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-gray-900">Başarılı</h3>
+                            <p class="text-sm text-gray-600 mt-1">Lastik başarıyla depodan çıkarıldı!</p>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button onclick="this.closest('.fixed').remove(); location.reload();" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
+                            Tamam
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(successModal);
+            setTimeout(() => {
+                successModal.remove();
+                location.reload();
+            }, 2000);
+        } else {
+            // Try to parse error as JSON, if fails show text
+            let errorMessage = 'Bilinmeyen bir hata oluştu';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || errorMessage;
+            } catch (e) {
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                errorMessage = 'Sunucu hatası: ' + (errorText.substring(0, 100) || 'Bilinmeyen hata');
+            }
+            // Show error modal
+            const errorModal = document.createElement('div');
+            errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            errorModal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                    <div class="flex items-center space-x-4 mb-4">
+                        <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
+                            <p class="text-sm text-gray-600 mt-1">${errorMessage}</p>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                            Kapat
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(errorModal);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        // Show error modal
+        const errorModal = document.createElement('div');
+        errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        errorModal.innerHTML = `
+            <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                <div class="flex items-center space-x-4 mb-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
+                        <p class="text-sm text-gray-600 mt-1">Bir hata oluştu: ${error.message}</p>
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                        Kapat
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(errorModal);
+    }
+}
+</script>
+{% endblock %}

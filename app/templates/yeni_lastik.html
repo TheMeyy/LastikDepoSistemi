@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+
+{% block title %}Yeni Lastik Depo Girişi - Lastik Depo Sistemi{% endblock %}
+
+{% block content %}
+<div class="animate-fade-in">
+    <!-- Page Title -->
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Yeni Lastik Depo Girişi</h1>
+    <p class="text-gray-600 mb-8">Müşteri seç, lastik bilgilerini ve rafı belirle, sonra depoya kaydet.</p>
+    
+    <form id="tireForm">
+        <!-- Step 1: Customer and Contact Information -->
+        <div id="step1" class="mb-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-6">1. Müşteri ve İletişim Bilgileri</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-1.5">Müşteri Adı / Soyadı *</label>
+                        <input type="text" id="customer_name" name="customer_name" 
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+                               required>
+                    </div>
+                    
+                    <div>
+                        <label for="customer_plate" class="block text-sm font-medium text-gray-700 mb-1.5">Plaka *</label>
+                        <input type="text" id="customer_plate" name="customer_plate" 
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+                               required>
+                    </div>
+                    
+                    <div>
+                        <label for="customer_phone" class="block text-sm font-medium text-gray-700 mb-1.5">Telefon *</label>
+                        <input type="text" id="customer_phone" name="customer_phone" 
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+                               required>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Step 2: Tire Information -->
+        <div id="step2" class="mb-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-6">2. Lastik Bilgilerini Gir</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="ebat" class="block text-sm font-medium text-gray-700 mb-1.5">Lastik Ebatı *</label>
+                        <select id="ebat" name="ebat" 
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10" 
+                                required>
+                            <option value="">Seçiniz...</option>
+                            {% if tire_sizes %}
+                                {% for size in tire_sizes %}
+                                <option value="{{ size }}">{{ size }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="mevsim" class="block text-sm font-medium text-gray-700 mb-1.5">Mevsim *</label>
+                        <select id="mevsim" name="mevsim" 
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10" 
+                                required>
+                            <option value="">Seçiniz...</option>
+                            <option value="Yaz">Yaz</option>
+                            <option value="Kış">Kış</option>
+                            <option value="4 Mevsim">4 Mevsim</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="dis_durumu" class="block text-sm font-medium text-gray-700 mb-1.5">Diş Durumu *</label>
+                        <select id="dis_durumu" name="dis_durumu" 
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10" 
+                                required>
+                            <option value="">Seçiniz...</option>
+                            <option value="İyi">İyi</option>
+                            <option value="Orta">Orta</option>
+                            <option value="Kötü">Kötü</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="brand" class="block text-sm font-medium text-gray-700 mb-1.5">Marka *</label>
+                        <select id="brand" name="brand" 
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10" 
+                                required>
+                            <option value="">Seçiniz...</option>
+                            {% if brands %}
+                                {% for brand in brands %}
+                                <option value="{{ brand }}">{{ brand }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="brand_note" class="block text-sm font-medium text-gray-700 mb-1.5">Marka Notu / Ek Bilgi</label>
+                    <textarea id="brand_note" name="brand_note" 
+                              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+                              rows="3" 
+                              placeholder="Onlar Michelin, sağ arka Lassa, sol arka Petlas gibi..."></textarea>
+                </div>
+                
+                <div>
+                    <label for="not" class="block text-sm font-medium text-gray-700 mb-1.5">Genel Not</label>
+                    <textarea id="not" name="not" 
+                              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+                              rows="3" 
+                              placeholder="Genel notlar..."></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Step 3: Depot Shelf Selection -->
+        <div id="step3" class="mb-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-6">3. Depo Rafını Seç ve Kaydet</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="raf_id" class="block text-sm font-medium text-gray-700 mb-1.5">Raf Kodu *</label>
+                        <select id="raf_id" name="raf_id" 
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10" 
+                                required>
+                            <option value="">Seçiniz...</option>
+                            {% if racks %}
+                                {% for rack in racks %}
+                                <option value="{{ rack.id }}" 
+                                        data-status="{{ rack.durum }}"
+                                        data-code="{{ rack.kod }}">
+                                    {{ rack.kod }}
+                                </option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="" disabled>Henüz raf oluşturulmamış. Lütfen önce raf ekleyin.</option>
+                            {% endif %}
+                        </select>
+                        <p id="rackStatus" class="text-sm text-gray-600 mt-2" style="display: none;"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Submit Button -->
+        <div class="flex justify-end mb-6">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-8 py-2.5 rounded-lg transition-colors shadow-sm">
+                Depoya Kaydet
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Raf seçildiğinde durumunu göster
+document.addEventListener('DOMContentLoaded', function() {
+    const rafSelect = document.getElementById('raf_id');
+    if (rafSelect) {
+        rafSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const status = selectedOption.getAttribute('data-status');
+            const statusText = document.getElementById('rackStatus');
+            
+            if (status && statusText) {
+                statusText.textContent = `Bu raf şu anda: ${status}`;
+                statusText.style.display = 'block';
+            } else if (statusText) {
+                statusText.style.display = 'none';
+            }
+        });
+    }
+    
+    // Form submit handler
+    const tireForm = document.getElementById('tireForm');
+    if (tireForm) {
+        tireForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Validate all fields
+            const customerName = document.getElementById('customer_name').value.trim();
+            const customerPlate = document.getElementById('customer_plate').value.trim();
+            const customerPhone = document.getElementById('customer_phone').value.trim();
+            const ebat = document.getElementById('ebat').value;
+            const mevsim = document.getElementById('mevsim').value;
+            const dis_durumu = document.getElementById('dis_durumu').value;
+            const brand = document.getElementById('brand').value;
+            const rafId = document.getElementById('raf_id').value;
+            
+            // Validation
+            if (!customerName || !customerPlate || !customerPhone) {
+                const errorModal = document.createElement('div');
+                errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                errorModal.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
+                                <p class="text-sm text-gray-600 mt-1">Lütfen tüm müşteri bilgilerini doldurun!</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                                Kapat
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(errorModal);
+                return;
+            }
+            
+            if (!ebat || !mevsim || !dis_durumu || !brand) {
+                const errorModal = document.createElement('div');
+                errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                errorModal.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
+                                <p class="text-sm text-gray-600 mt-1">Lütfen tüm zorunlu lastik bilgilerini doldurun!</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                                Kapat
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(errorModal);
+                return;
+            }
+            
+            if (!rafId) {
+                const errorModal = document.createElement('div');
+                errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                errorModal.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
+                                <p class="text-sm text-gray-600 mt-1">Lütfen bir raf seçin!</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                                Kapat
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(errorModal);
+                return;
+            }
+            
+            // Önce müşteriyi oluştur veya bul
+            let customerId;
+            try {
+                // Müşteriyi ara
+                const searchResponse = await fetch(`/api/customers/?skip=0&limit=100`);
+                const customers = await searchResponse.json();
+                
+                const existingCustomer = customers.find(c => 
+                    c.plaka === customerPlate && 
+                    c.telefon === customerPhone
+                );
+                
+                if (existingCustomer) {
+                    customerId = existingCustomer.id;
+                } else {
+                    // Yeni müşteri oluştur
+                    const createResponse = await fetch('/api/customers/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            ad_soyad: customerName,
+                            telefon: customerPhone,
+                            plaka: customerPlate
+                        })
+                    });
+                    
+                    if (createResponse.ok) {
+                        const newCustomer = await createResponse.json();
+                        customerId = newCustomer.id;
+                    } else {
+                        const error = await createResponse.json();
+                        const errorMessage = error.detail || 'Müşteri oluşturulamadı';
+                        
+                        const errorModal = document.createElement('div');
+                        errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                        errorModal.innerHTML = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                                <div class="flex items-center space-x-4 mb-4">
+                                    <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
+                                        <p class="text-sm text-gray-600 mt-1">${errorMessage}</p>
+                                    </div>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                                        Kapat
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(errorModal);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error('Error with customer:', error);
+                const errorModal = document.createElement('div');
+                errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                errorModal.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
+                                <p class="text-sm text-gray-600 mt-1">Bir hata oluştu: ${error.message}</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                                Kapat
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(errorModal);
+                return;
+            }
+            
+            // Lastik bilgilerini hazırla
+            const brandNote = document.getElementById('brand_note').value;
+            const generalNote = document.getElementById('not').value;
+            const combinedNote = [brandNote, generalNote].filter(n => n).join('\n\n') || null;
+            
+            const tireData = {
+                musteri_id: parseInt(customerId),
+                brand: brand,
+                ebat: ebat,
+                mevsim: mevsim,
+                dis_durumu: dis_durumu,
+                not: combinedNote,
+                raf_id: parseInt(rafId),
+                durum: "Depoda"
+            };
+            
+            try {
+                const response = await fetch('/api/tires/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(tireData)
+                });
+                
+                if (response.ok) {
+                    // Show success message
+                    const successModal = document.createElement('div');
+                    successModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                    successModal.innerHTML = `
+                        <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                            <div class="flex items-center space-x-4 mb-4">
+                                <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-semibold text-gray-900">Başarılı</h3>
+                                    <p class="text-sm text-gray-600 mt-1">Lastik başarıyla depoya kaydedildi!</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-end">
+                                <button onclick="this.closest('.fixed').remove(); window.location.href = '/lastik-ara';" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
+                                    Tamam
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(successModal);
+                    setTimeout(() => {
+                        successModal.remove();
+                        window.location.href = '/lastik-ara';
+                    }, 1500);
+                } else {
+                    // Try to parse error as JSON, if fails show text
+                    let errorMessage = 'Lastik kaydedilemedi';
+                    try {
+                        const errorData = await response.json();
+                        if (errorData && typeof errorData === 'object') {
+                            errorMessage = errorData.detail || errorData.message || JSON.stringify(errorData);
+                        } else if (typeof errorData === 'string') {
+                            errorMessage = errorData;
+                        }
+                    } catch (e) {
+                        // If JSON parsing fails, try to get text
+                        try {
+                            const errorText = await response.text();
+                            errorMessage = errorText || 'Lastik kaydedilemedi';
+                        } catch (textError) {
+                            errorMessage = `Sunucu hatası: ${response.status} ${response.statusText}`;
+                        }
+                    }
+                    
+                    // Show error message
+                    const errorModal = document.createElement('div');
+                    errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                    errorModal.innerHTML = `
+                        <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                            <div class="flex items-center space-x-4 mb-4">
+                                <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
+                                    <p class="text-sm text-gray-600 mt-1">${errorMessage}</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-end">
+                                <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                                    Kapat
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(errorModal);
+                }
+            } catch (error) {
+                console.error('Error creating tire:', error);
+                const errorModal = document.createElement('div');
+                errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                errorModal.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
+                                <p class="text-sm text-gray-600 mt-1">Bir hata oluştu: ${error.message}</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                                Kapat
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(errorModal);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
