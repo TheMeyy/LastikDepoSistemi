@@ -7,8 +7,8 @@ from app.utils.enums import MevsimEnum, DisDurumuEnum, TireDurumEnum, BRAND_LIST
 class TireCreate(BaseModel):
     """Schema for creating a tire"""
     musteri_id: int = Field(..., description="Customer ID")
-    brand: str = Field(..., description="Tire brand (from predefined list)")
-    ebat: str = Field(..., description="Tire size (e.g., 205/55 R16)")
+    brand: str = Field(..., description="Tire brand")
+    ebat: Optional[str] = Field(None, description="Tire size (deprecated, use tire1_size-tire6_size)")
     mevsim: MevsimEnum = Field(..., description="Season")
     dis_durumu: DisDurumuEnum = Field(..., description="Tire condition")
     not_: Optional[str] = Field(None, alias="not", description="Optional note")
@@ -16,6 +16,20 @@ class TireCreate(BaseModel):
     giris_tarihi: Optional[datetime] = Field(None, description="Entry date (defaults to now)")
     cikis_tarihi: Optional[datetime] = Field(None, description="Exit date")
     durum: TireDurumEnum = Field(default=TireDurumEnum.DEPODA, description="Tire status")
+    
+    # Multiple tire support (up to 6 tires)
+    tire1_size: Optional[str] = Field(None, description="Tire 1 size")
+    tire1_production_date: Optional[str] = Field(None, description="Tire 1 production year (e.g., '2024')")
+    tire2_size: Optional[str] = Field(None, description="Tire 2 size")
+    tire2_production_date: Optional[str] = Field(None, description="Tire 2 production year (e.g., '2024')")
+    tire3_size: Optional[str] = Field(None, description="Tire 3 size")
+    tire3_production_date: Optional[str] = Field(None, description="Tire 3 production year (e.g., '2024')")
+    tire4_size: Optional[str] = Field(None, description="Tire 4 size")
+    tire4_production_date: Optional[str] = Field(None, description="Tire 4 production year (e.g., '2024')")
+    tire5_size: Optional[str] = Field(None, description="Tire 5 size")
+    tire5_production_date: Optional[str] = Field(None, description="Tire 5 production year (e.g., '2024')")
+    tire6_size: Optional[str] = Field(None, description="Tire 6 size")
+    tire6_production_date: Optional[str] = Field(None, description="Tire 6 production year (e.g., '2024')")
     
     @field_validator("durum", mode="before")
     @classmethod
@@ -44,12 +58,7 @@ class TireCreate(BaseModel):
             return v
         return v
 
-    @field_validator("brand")
-    @classmethod
-    def validate_brand(cls, v):
-        if v not in BRAND_LIST:
-            raise ValueError(f"Brand must be one of: {', '.join(BRAND_LIST)}")
-        return v
+    # Brand validation removed - brands are now stored in database and can be added dynamically
 
     class Config:
         populate_by_name = True
@@ -83,6 +92,20 @@ class TireRead(BaseModel):
     durum: TireDurumEnum
     customer_name: str  # Will be populated from Customer relationship
     customer_plate: str  # Will be populated from Customer relationship
+    
+    # Multiple tire support (up to 6 tires)
+    tire1_size: Optional[str] = None
+    tire1_production_date: Optional[str] = None  # Year as string (e.g., "2024")
+    tire2_size: Optional[str] = None
+    tire2_production_date: Optional[str] = None  # Year as string (e.g., "2024")
+    tire3_size: Optional[str] = None
+    tire3_production_date: Optional[str] = None  # Year as string (e.g., "2024")
+    tire4_size: Optional[str] = None
+    tire4_production_date: Optional[str] = None  # Year as string (e.g., "2024")
+    tire5_size: Optional[str] = None
+    tire5_production_date: Optional[str] = None  # Year as string (e.g., "2024")
+    tire6_size: Optional[str] = None
+    tire6_production_date: Optional[str] = None  # Year as string (e.g., "2024")
 
     class Config:
         from_attributes = True

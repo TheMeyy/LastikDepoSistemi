@@ -130,27 +130,46 @@
         </div>
         
         {% if tires %}
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+        <div class="tire-table-container" style="overflow-x: auto; overflow-y: auto; width: 100%;">
+            <table class="tire-table" style="min-width: 1400px;">
+                <thead class="tire-table-header">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri Adı</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plaka</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lastik Ebatı</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">Lastik Ebatları</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marka</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Raf Kodu</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giriş Tarihi</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Çıkış Tarihi</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marka Notu</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Genel Not</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% for tire in tires %}
-                    <tr class="hover:bg-gray-50 transition-colors">
+                    <tr class="tire-table-row" data-tire-id="{{ tire.id }}" onclick="selectTableRow(this)">
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ tire.customer_name }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ tire.customer_plate }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ tire.ebat }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            {% if tire.tire_sizes %}
+                                <div class="flex flex-wrap gap-2">
+                                    {% for size in tire.tire_sizes %}
+                                        {% set index = loop.index0 %}
+                                        {% set prod_date = tire.tire_production_dates[index] if tire.tire_production_dates and tire.tire_production_dates[index] else None %}
+                                        <div class="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded border border-gray-200">
+                                            <span class="font-medium text-gray-900">{{ size }}</span>
+                                            {% if prod_date %}
+                                                <span class="text-gray-500 text-xs font-normal">({{ prod_date }})</span>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600">{{ tire.brand }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">{{ tire.rack_code }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tire.giris_tarihi.strftime('%d.%m.%Y') if tire.giris_tarihi else '-' }}</td>
@@ -166,9 +185,23 @@
                             </span>
                             {% endif %}
                         </td>
+                        <td class="px-6 py-4 text-sm text-gray-700 max-w-xs">
+                            {% if tire.brand_note %}
+                                <div class="break-words">{{ tire.brand_note }}</div>
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-700 max-w-xs">
+                            {% if tire.general_note %}
+                                <div class="break-words">{{ tire.general_note }}</div>
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             {% if tire.durum == 'Depoda' %}
-                            <button onclick="showExitModal({{ tire.id }})" class="text-red-600 hover:text-red-800 font-medium">
+                            <button onclick="event.stopPropagation(); showExitModal({{ tire.id }})" class="text-red-600 hover:text-red-800 font-medium">
                                 Çıkış Yap
                             </button>
                             {% else %}
@@ -220,6 +253,18 @@
 {% block scripts %}
 <script>
 let currentTireId = null;
+let selectedRow = null;
+
+function selectTableRow(row) {
+    // Remove selected class from all rows
+    document.querySelectorAll('.tire-table-row').forEach(r => {
+        r.classList.remove('selected');
+    });
+    
+    // Add selected class to clicked row
+    row.classList.add('selected');
+    selectedRow = row;
+}
 
 function showExitModal(tireId) {
     currentTireId = tireId;
@@ -395,5 +440,6 @@ async function exitTire(tireId) {
         document.body.appendChild(errorModal);
     }
 }
+
 </script>
 {% endblock %}

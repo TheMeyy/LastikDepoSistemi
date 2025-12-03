@@ -13,6 +13,7 @@ class MevsimEnum(str, enum.Enum):
 
 
 class DisDurumuEnum(str, enum.Enum):
+    SIFIR = "Sıfır"
     IYI = "İyi"
     ORTA = "Orta"
     KOTU = "Kötü"
@@ -51,6 +52,13 @@ class Brand(Base):
     tires = relationship("Tire", back_populates="brand")
 
 
+class TireSize(Base):
+    __tablename__ = "tire_sizes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ebat = Column(String, nullable=False, unique=True)
+
+
 class Rack(Base):
     __tablename__ = "racks"
 
@@ -69,7 +77,7 @@ class Tire(Base):
     id = Column(Integer, primary_key=True, index=True)
     musteri_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
     marka_id = Column(Integer, ForeignKey("brands.id"), nullable=False)
-    ebat = Column(String, nullable=False)
+    ebat = Column(String, nullable=False)  # Deprecated: kept for backward compatibility
     mevsim = Column(Enum(MevsimEnum), nullable=False)
     dis_durumu = Column(Enum(DisDurumuEnum), nullable=False)
     not_ = Column("not", Text, nullable=True)
@@ -77,6 +85,20 @@ class Tire(Base):
     giris_tarihi = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     cikis_tarihi = Column(DateTime(timezone=True), nullable=True)
     durum = Column(Enum(TireDurumEnum, native_enum=False, length=20), nullable=False, default=TireDurumEnum.DEPODA)
+    
+    # Multiple tire support (up to 6 tires)
+    tire1_size = Column(String, nullable=True)
+    tire1_production_date = Column(String, nullable=True)  # Year as string (e.g., "2024")
+    tire2_size = Column(String, nullable=True)
+    tire2_production_date = Column(String, nullable=True)  # Year as string (e.g., "2024")
+    tire3_size = Column(String, nullable=True)
+    tire3_production_date = Column(String, nullable=True)  # Year as string (e.g., "2024")
+    tire4_size = Column(String, nullable=True)
+    tire4_production_date = Column(String, nullable=True)  # Year as string (e.g., "2024")
+    tire5_size = Column(String, nullable=True)
+    tire5_production_date = Column(String, nullable=True)  # Year as string (e.g., "2024")
+    tire6_size = Column(String, nullable=True)
+    tire6_production_date = Column(String, nullable=True)  # Year as string (e.g., "2024")
 
     # Relationships
     customer = relationship("Customer", back_populates="tires")

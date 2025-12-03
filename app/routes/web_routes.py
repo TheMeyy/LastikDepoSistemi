@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
 from app.models.database import get_db
-from app.models.models import Tire, Customer, Rack, Brand
+from app.models.models import Tire, Customer, Rack, Brand, TireSize
 from app.models.models import TireDurumEnum as ModelTireDurumEnum, DisDurumuEnum as ModelDisDurumuEnum
 from app.utils.enums import BRAND_LIST, TIRE_SIZES, TireDurumEnum, DisDurumuEnum
 from sqlalchemy.orm import joinedload
@@ -21,8 +21,15 @@ templates = env
 
 
 @router.get("/", response_class=HTMLResponse)
-async def home(request: Request):
+async def home(request: Request, db: Session = Depends(get_db)):
     """Redirect to lastik-ara"""
+    # Get brands and tire sizes from database
+    brands = db.query(Brand).order_by(Brand.marka_adi).all()
+    brand_list = [brand.marka_adi for brand in brands]
+    
+    tire_sizes = db.query(TireSize).order_by(TireSize.ebat).all()
+    tire_size_list = [size.ebat for size in tire_sizes]
+    
     query_params = {
         "customer_name": "",
         "plate": "",
@@ -38,8 +45,8 @@ async def home(request: Request):
     return HTMLResponse(content=template.render(
         request=request,
         tires=[],
-        brands=BRAND_LIST,
-        tire_sizes=TIRE_SIZES,
+        brands=brand_list,
+        tire_sizes=tire_size_list,
         query_params=query_params,
         current_path="/"
     ))
@@ -123,7 +130,19 @@ async def lastik_ara(
                 query = query.filter(Tire.id == -1)  # No results
         
         if ebat:
-            query = query.filter(Tire.ebat.ilike(f"%{ebat}%"))
+            # Filter by any tire size (tire1_size through tire6_size or legacy ebat field)
+            from sqlalchemy import or_
+            query = query.filter(
+                or_(
+                    Tire.ebat.ilike(f"%{ebat}%"),
+                    Tire.tire1_size.ilike(f"%{ebat}%"),
+                    Tire.tire2_size.ilike(f"%{ebat}%"),
+                    Tire.tire3_size.ilike(f"%{ebat}%"),
+                    Tire.tire4_size.ilike(f"%{ebat}%"),
+                    Tire.tire5_size.ilike(f"%{ebat}%"),
+                    Tire.tire6_size.ilike(f"%{ebat}%")
+                )
+            )
         
         if brand:
             brand_obj = db.query(Brand).filter(Brand.marka_adi == brand).first()
@@ -167,6 +186,7 @@ async def lastik_ara(
             except ValueError:
                 pass
         
+        # Production date filters (year as string)
         # Order by entry date descending
         query = query.order_by(Tire.giris_tarihi.desc())
         
@@ -284,16 +304,48 @@ async def lastik_ara(
                 print(f"Error converting tire.durum: {e}, type: {type(getattr(tire, 'durum', None))}, value: {getattr(tire, 'durum', None)}")
                 durum_display = "Depoda"
             
+            # Parse not field to separate brand_note and general_note
+            # Format: brand_note + "\n\n" + general_note
+            not_value = tire.not_ if tire.not_ else ""
+            brand_note = ""
+            general_note = ""
+            if not_value:
+                parts = not_value.split("\n\n", 1)
+                brand_note = parts[0] if len(parts) > 0 else ""
+                general_note = parts[1] if len(parts) > 1 else ""
+            
+            # Collect all tire sizes and production dates (only those that exist)
+            tire_sizes_list = []
+            tire_production_dates_list = []
+            
+            # Check tire1 through tire6
+            for i in range(1, 7):
+                size_field = getattr(tire, f'tire{i}_size', None)
+                prod_date_field = getattr(tire, f'tire{i}_production_date', None)
+                
+                if size_field:
+                    tire_sizes_list.append(size_field)
+                    tire_production_dates_list.append(prod_date_field if prod_date_field else None)
+            
+            # If no tire sizes found in tire1-tire6, use legacy ebat field
+            if not tire_sizes_list and tire.ebat:
+                tire_sizes_list.append(tire.ebat)
+                tire_production_dates_list.append(None)
+            
             tire_list.append({
                 "id": tire.id,
                 "customer_name": tire.customer.ad_soyad if tire.customer else "",
                 "customer_plate": tire.customer.plaka if tire.customer else "",
-                "ebat": tire.ebat,
+                "ebat": tire.ebat,  # Keep for backward compatibility
+                "tire_sizes": tire_sizes_list,  # List of all tire sizes
+                "tire_production_dates": tire_production_dates_list,  # List of production dates
                 "brand": tire.brand.marka_adi if tire.brand else "",
                 "rack_code": tire.rack.kod if tire.rack else "",
                 "giris_tarihi": tire.giris_tarihi,
                 "cikis_tarihi": tire.cikis_tarihi,
-                "durum": durum_display
+                "durum": durum_display,
+                "brand_note": brand_note,
+                "general_note": general_note
             })
         
         # Prepare query params for template
@@ -320,12 +372,19 @@ async def lastik_ara(
             "entry_date_to": entry_date_to or ""
         }
     
+        # Get brands and tire sizes from database
+        brands = db.query(Brand).order_by(Brand.marka_adi).all()
+        brand_list = [brand.marka_adi for brand in brands]
+        
+        tire_sizes = db.query(TireSize).order_by(TireSize.ebat).all()
+        tire_size_list = [size.ebat for size in tire_sizes]
+        
         template = templates.get_template("index.html")
         return HTMLResponse(content=template.render(
             request=request,
             tires=tire_list,
-            brands=BRAND_LIST,
-            tire_sizes=TIRE_SIZES,
+            brands=brand_list,
+            tire_sizes=tire_size_list,
             query_params=query_params,
             current_path="/lastik-ara"
         ))
@@ -349,11 +408,18 @@ async def yeni_lastik(request: Request, db: Session = Depends(get_db)):
     racks = db.query(Rack).filter(Rack.durum == RackDurumEnum.BOS).order_by(Rack.kod).all()
     rack_list = [{"id": r.id, "kod": r.kod, "durum": r.durum.value if hasattr(r.durum, 'value') else str(r.durum)} for r in racks]
     
+    # Get brands and tire sizes from database
+    brands = db.query(Brand).order_by(Brand.marka_adi).all()
+    brand_list = [brand.marka_adi for brand in brands]
+    
+    tire_sizes = db.query(TireSize).order_by(TireSize.ebat).all()
+    tire_size_list = [size.ebat for size in tire_sizes]
+    
     template = templates.get_template("yeni_lastik.html")
     return HTMLResponse(content=template.render(
         request=request,
-        brands=BRAND_LIST,
-        tire_sizes=TIRE_SIZES,
+        brands=brand_list,
+        tire_sizes=tire_size_list,
         racks=rack_list,
         current_path="/yeni-lastik"
     ))

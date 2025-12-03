@@ -44,21 +44,23 @@
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <h2 class="text-lg font-bold text-gray-900 mb-6">2. Lastik Bilgilerini Gir</h2>
                 
+                <!-- Dynamic Tires Container -->
+                <div id="tiresContainer" class="space-y-4 mb-4">
+                    <!-- Initial tire will be added by JavaScript -->
+                </div>
+                
+                <!-- Add Tire Button -->
+                <div class="flex justify-center mb-6">
+                    <button type="button" id="addTireBtn" onclick="addTireField()" 
+                            class="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span>Yeni Lastik Ekle</span>
+                    </button>
+                </div>
+                
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label for="ebat" class="block text-sm font-medium text-gray-700 mb-1.5">Lastik Ebatı *</label>
-                        <select id="ebat" name="ebat" 
-                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10" 
-                                required>
-                            <option value="">Seçiniz...</option>
-                            {% if tire_sizes %}
-                                {% for size in tire_sizes %}
-                                <option value="{{ size }}">{{ size }}</option>
-                                {% endfor %}
-                            {% endif %}
-                        </select>
-                    </div>
-                    
                     <div>
                         <label for="mevsim" class="block text-sm font-medium text-gray-700 mb-1.5">Mevsim *</label>
                         <select id="mevsim" name="mevsim" 
@@ -77,6 +79,7 @@
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10" 
                                 required>
                             <option value="">Seçiniz...</option>
+                            <option value="Sıfır">Sıfır</option>
                             <option value="İyi">İyi</option>
                             <option value="Orta">Orta</option>
                             <option value="Kötü">Kötü</option>
@@ -85,16 +88,25 @@
                     
                     <div>
                         <label for="brand" class="block text-sm font-medium text-gray-700 mb-1.5">Marka *</label>
-                        <select id="brand" name="brand" 
-                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10" 
-                                required>
-                            <option value="">Seçiniz...</option>
-                            {% if brands %}
-                                {% for brand in brands %}
-                                <option value="{{ brand }}">{{ brand }}</option>
-                                {% endfor %}
-                            {% endif %}
-                        </select>
+                        <div class="flex items-center gap-2">
+                            <select id="brand" name="brand" 
+                                    class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10" 
+                                    required>
+                                <option value="">Seçiniz...</option>
+                                {% if brands %}
+                                    {% for brand in brands %}
+                                    <option value="{{ brand }}">{{ brand }}</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                            <button type="button" onclick="showAddBrandModal()" 
+                                    class="px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm flex-shrink-0"
+                                    title="Yeni marka ekle">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -157,8 +169,152 @@
 
 {% block scripts %}
 <script>
-// Raf seçildiğinde durumunu göster
+// Dynamic tire fields management
+let tireCount = 0;
+const maxTires = 6;
+const tireSizes = {{ tire_sizes | tojson if tire_sizes else '[]' }};
+
+function addTireField() {
+    if (tireCount >= maxTires) {
+        showErrorModal(`Maksimum ${maxTires} lastik eklenebilir!`);
+        return;
+    }
+    
+    tireCount++;
+    const container = document.getElementById('tiresContainer');
+    const tireDiv = document.createElement('div');
+    tireDiv.className = 'tire-field-item grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg relative';
+    tireDiv.setAttribute('data-tire-index', tireCount);
+    
+    tireDiv.innerHTML = `
+        <div>
+            <label for="tire${tireCount}_size" class="block text-sm font-medium text-gray-700 mb-1.5">${tireCount}. Lastik Ebatı</label>
+            <div class="flex items-center gap-2">
+                <select id="tire${tireCount}_size" name="tire${tireCount}_size" 
+                        class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10">
+                    <option value="">Seçiniz...</option>
+                    ${tireSizes.map(size => `<option value="${size}">${size}</option>`).join('')}
+                </select>
+                <button type="button" onclick="showAddTireSizeModal()" 
+                        class="px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm flex-shrink-0"
+                        title="Yeni ebat ekle">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div>
+            <label for="tire${tireCount}_production_date" class="block text-sm font-medium text-gray-700 mb-1.5">${tireCount}. Lastik Üretim Yılı</label>
+            <div class="flex items-end gap-2">
+                <input type="text" id="tire${tireCount}_production_date" name="tire${tireCount}_production_date" 
+                       class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                       maxlength="4" pattern="[0-9]{4}">
+                ${tireCount > 1 ? `<button type="button" onclick="removeTireField(${tireCount})" class="px-3 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors" title="Bu lastiği kaldır">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                </button>` : ''}
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(tireDiv);
+    updateAddButtonState();
+    updateTireLabels();
+}
+
+function removeTireField(tireIndex) {
+    const tireItem = document.querySelector(`[data-tire-index="${tireIndex}"]`);
+    if (tireItem) {
+        tireItem.remove();
+        tireCount--;
+        updateAddButtonState();
+        updateTireLabels();
+    }
+}
+
+function updateAddButtonState() {
+    const addBtn = document.getElementById('addTireBtn');
+    if (tireCount >= maxTires) {
+        addBtn.disabled = true;
+        addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        addBtn.classList.remove('hover:bg-blue-700');
+    } else {
+        addBtn.disabled = false;
+        addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        addBtn.classList.add('hover:bg-blue-700');
+    }
+}
+
+function updateTireLabels() {
+    const tireItems = document.querySelectorAll('.tire-field-item');
+    tireItems.forEach((item, index) => {
+        const tireNum = index + 1;
+        item.setAttribute('data-tire-index', tireNum);
+        const sizeLabel = item.querySelector('label[for^="tire"]');
+        const dateLabel = item.querySelector('label[for*="production_date"]');
+        const sizeSelectContainer = item.querySelector('div.flex.items-center.gap-2');
+        const sizeSelect = item.querySelector('select[id^="tire"]');
+        const dateInput = item.querySelector('input[id*="production_date"]');
+        const removeBtn = item.querySelector('button[onclick*="removeTireField"]');
+        
+        if (sizeLabel) {
+            sizeLabel.textContent = `${tireNum}. Lastik Ebatı`;
+            sizeLabel.setAttribute('for', `tire${tireNum}_size`);
+        }
+        if (dateLabel) {
+            dateLabel.textContent = `${tireNum}. Lastik Üretim Yılı`;
+            dateLabel.setAttribute('for', `tire${tireNum}_production_date`);
+        }
+        if (sizeSelect) {
+            sizeSelect.id = `tire${tireNum}_size`;
+            sizeSelect.name = `tire${tireNum}_size`;
+        }
+        if (dateInput) {
+            dateInput.id = `tire${tireNum}_production_date`;
+            dateInput.name = `tire${tireNum}_production_date`;
+        }
+        if (removeBtn && tireNum > 1) {
+            removeBtn.setAttribute('onclick', `removeTireField(${tireNum})`);
+        } else if (removeBtn && tireNum === 1) {
+            removeBtn.remove();
+        }
+    });
+}
+
+function showErrorModal(message) {
+    const errorModal = document.createElement('div');
+    errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    errorModal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+            <div class="flex items-center space-x-4 mb-4">
+                <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
+                    <p class="text-sm text-gray-600 mt-1">${message}</p>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                    Kapat
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(errorModal);
+}
+
+// Initialize: Add first tire field on page load
 document.addEventListener('DOMContentLoaded', function() {
+    // Add initial tire field
+    addTireField();
+    
+    // Raf seçildiğinde durumunu göster
     const rafSelect = document.getElementById('raf_id');
     if (rafSelect) {
         rafSelect.addEventListener('change', function() {
@@ -185,11 +341,32 @@ document.addEventListener('DOMContentLoaded', function() {
             const customerName = document.getElementById('customer_name').value.trim();
             const customerPlate = document.getElementById('customer_plate').value.trim();
             const customerPhone = document.getElementById('customer_phone').value.trim();
-            const ebat = document.getElementById('ebat').value;
             const mevsim = document.getElementById('mevsim').value;
             const dis_durumu = document.getElementById('dis_durumu').value;
             const brand = document.getElementById('brand').value;
             const rafId = document.getElementById('raf_id').value;
+            
+            // Collect tire data dynamically from all tire fields
+            const tires = [];
+            const tireItems = document.querySelectorAll('.tire-field-item');
+            tireItems.forEach((item) => {
+                const sizeSelect = item.querySelector('select[id^="tire"]');
+                const yearInput = item.querySelector('input[id*="production_date"]');
+                if (sizeSelect && sizeSelect.value) {
+                    let productionYear = null;
+                    if (yearInput && yearInput.value && yearInput.value.trim()) {
+                        const year = yearInput.value.trim();
+                        // Validate year (4 digits, reasonable range)
+                        if (/^\d{4}$/.test(year) && parseInt(year) >= 1900 && parseInt(year) <= new Date().getFullYear() + 1) {
+                            productionYear = year;
+                        }
+                    }
+                    tires.push({
+                        size: sizeSelect.value,
+                        production_date: productionYear
+                    });
+                }
+            });
             
             // Validation
             if (!customerName || !customerPlate || !customerPhone) {
@@ -219,7 +396,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            if (!ebat || !mevsim || !dis_durumu || !brand) {
+            if (tires.length === 0) {
+                const errorModal = document.createElement('div');
+                errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                errorModal.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
+                                <p class="text-sm text-gray-600 mt-1">En az bir lastik ebatı seçmelisiniz!</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                                Kapat
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(errorModal);
+                return;
+            }
+            
+            if (!mevsim || !dis_durumu || !brand) {
                 const errorModal = document.createElement('div');
                 errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
                 errorModal.innerHTML = `
@@ -367,16 +571,36 @@ document.addEventListener('DOMContentLoaded', function() {
             const generalNote = document.getElementById('not').value;
             const combinedNote = [brandNote, generalNote].filter(n => n).join('\n\n') || null;
             
+            // Build tire data with multiple tires
             const tireData = {
                 musteri_id: parseInt(customerId),
                 brand: brand,
-                ebat: ebat,
+                ebat: tires[0]?.size || '',  // Keep for backward compatibility
                 mevsim: mevsim,
                 dis_durumu: dis_durumu,
                 not: combinedNote,
                 raf_id: parseInt(rafId),
                 durum: "Depoda"
             };
+            
+            // Initialize all 6 tire fields as null
+            for (let i = 1; i <= 6; i++) {
+                tireData[`tire${i}_size`] = null;
+                tireData[`tire${i}_production_date`] = null;
+            }
+            
+            // Fill in tire data from collected tires
+            tires.forEach((tire, index) => {
+                const tireNum = index + 1;
+                if (tireNum <= 6) {
+                    tireData[`tire${tireNum}_size`] = tire.size;
+                    // Production date is now just a year string (e.g., "2024")
+                    tireData[`tire${tireNum}_production_date`] = tire.production_date || null;
+                }
+            });
+            
+            // Debug: Log the data being sent
+            console.log('Sending tire data:', tireData);
             
             try {
                 const response = await fetch('/api/tires/', {
@@ -490,5 +714,213 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Add Brand Modal Functions
+function showAddBrandModal() {
+    document.getElementById('addBrandModal').classList.remove('hidden');
+    document.getElementById('newBrandName').value = '';
+    document.getElementById('newBrandName').focus();
+}
+
+function hideAddBrandModal() {
+    document.getElementById('addBrandModal').classList.add('hidden');
+    document.getElementById('newBrandName').value = '';
+}
+
+async function saveNewBrand() {
+    const brandName = document.getElementById('newBrandName').value.trim();
+    
+    if (!brandName) {
+        showErrorModal('Lütfen marka adını girin!');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/brands/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ marka_adi: brandName })
+        });
+        
+        if (response.ok) {
+            const newBrand = await response.json();
+            
+            // Add to brand dropdown
+            const brandSelect = document.getElementById('brand');
+            const newOption = document.createElement('option');
+            newOption.value = newBrand.marka_adi;
+            newOption.textContent = newBrand.marka_adi;
+            newOption.selected = true;
+            brandSelect.appendChild(newOption);
+            
+            hideAddBrandModal();
+            
+            // Show success message
+            const successModal = document.createElement('div');
+            successModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            successModal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                    <div class="flex items-center space-x-4 mb-4">
+                        <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-gray-900">Başarılı</h3>
+                            <p class="text-sm text-gray-600 mt-1">Marka başarıyla eklendi!</p>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button onclick="this.closest('.fixed').remove()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
+                            Tamam
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(successModal);
+            setTimeout(() => successModal.remove(), 2000);
+        } else {
+            const errorData = await response.json();
+            showErrorModal(errorData.detail || 'Marka eklenemedi');
+        }
+    } catch (error) {
+        console.error('Error adding brand:', error);
+        showErrorModal('Bir hata oluştu: ' + error.message);
+    }
+}
+
+// Add Tire Size Modal Functions
+function showAddTireSizeModal() {
+    document.getElementById('addTireSizeModal').classList.remove('hidden');
+    document.getElementById('newTireSize').value = '';
+    document.getElementById('newTireSize').focus();
+}
+
+function hideAddTireSizeModal() {
+    document.getElementById('addTireSizeModal').classList.add('hidden');
+    document.getElementById('newTireSize').value = '';
+}
+
+async function saveNewTireSize() {
+    const tireSize = document.getElementById('newTireSize').value.trim();
+    
+    if (!tireSize) {
+        showErrorModal('Lütfen lastik ebatını girin!');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/tire-sizes/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ebat: tireSize })
+        });
+        
+        if (response.ok) {
+            const newSize = await response.json();
+            
+            // Add to all tire size dropdowns
+            const tireSizeSelects = document.querySelectorAll('select[id*="_size"]');
+            tireSizeSelects.forEach(select => {
+                const newOption = document.createElement('option');
+                newOption.value = newSize.ebat;
+                newOption.textContent = newSize.ebat;
+                select.appendChild(newOption);
+            });
+            
+            // Update tireSizes array for dynamic tire fields
+            tireSizes.push(newSize.ebat);
+            
+            hideAddTireSizeModal();
+            
+            // Show success message
+            const successModal = document.createElement('div');
+            successModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            successModal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                    <div class="flex items-center space-x-4 mb-4">
+                        <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-gray-900">Başarılı</h3>
+                            <p class="text-sm text-gray-600 mt-1">Ebat başarıyla eklendi!</p>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button onclick="this.closest('.fixed').remove()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
+                            Tamam
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(successModal);
+            setTimeout(() => successModal.remove(), 2000);
+        } else {
+            const errorData = await response.json();
+            showErrorModal(errorData.detail || 'Ebat eklenemedi');
+        }
+    } catch (error) {
+        console.error('Error adding tire size:', error);
+        showErrorModal('Bir hata oluştu: ' + error.message);
+    }
+}
 </script>
+
+<!-- Add Brand Modal -->
+<div id="addBrandModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-xl font-semibold text-gray-900 mb-4">Yeni Marka Ekle</h3>
+        <div class="space-y-4">
+            <div>
+                <label for="newBrandName" class="block text-sm font-medium text-gray-700 mb-1.5">Marka Adı *</label>
+                <input type="text" id="newBrandName" 
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                       placeholder="Marka adını girin">
+            </div>
+            <div class="flex justify-end space-x-3 pt-4">
+                <button type="button" onclick="hideAddBrandModal()" 
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                    İptal
+                </button>
+                <button type="button" onclick="saveNewBrand()" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
+                    Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Tire Size Modal -->
+<div id="addTireSizeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-xl font-semibold text-gray-900 mb-4">Yeni Ebat Ekle</h3>
+        <div class="space-y-4">
+            <div>
+                <label for="newTireSize" class="block text-sm font-medium text-gray-700 mb-1.5">Lastik Ebatı *</label>
+                <input type="text" id="newTireSize" 
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                       placeholder="Örn: 225/50 R17">
+            </div>
+            <div class="flex justify-end space-x-3 pt-4">
+                <button type="button" onclick="hideAddTireSizeModal()" 
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                    İptal
+                </button>
+                <button type="button" onclick="saveNewTireSize()" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
+                    Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

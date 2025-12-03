@@ -74,14 +74,27 @@ def create_tire(tire: TireCreate, db: Session = Depends(get_db)):
         db_tire = Tire(
             musteri_id=tire.musteri_id,
             marka_id=brand.id,
-            ebat=tire.ebat,
+            ebat=tire.ebat or '',
             mevsim=tire.mevsim,
             dis_durumu=tire.dis_durumu,
             not_=tire.not_,
             raf_id=tire.raf_id,
             giris_tarihi=entry_date,
             cikis_tarihi=tire.cikis_tarihi,
-            durum=durum_value
+            durum=durum_value,
+            # Multiple tire support
+            tire1_size=tire.tire1_size,
+            tire1_production_date=tire.tire1_production_date,
+            tire2_size=tire.tire2_size,
+            tire2_production_date=tire.tire2_production_date,
+            tire3_size=tire.tire3_size,
+            tire3_production_date=tire.tire3_production_date,
+            tire4_size=tire.tire4_size,
+            tire4_production_date=tire.tire4_production_date,
+            tire5_size=tire.tire5_size,
+            tire5_production_date=tire.tire5_production_date,
+            tire6_size=tire.tire6_size,
+            tire6_production_date=tire.tire6_production_date
         )
         db.add(db_tire)
         
@@ -254,7 +267,7 @@ def update_tire(
         # Update tire fields
         db_tire.musteri_id = tire.musteri_id
         db_tire.marka_id = brand.id
-        db_tire.ebat = tire.ebat
+        db_tire.ebat = tire.ebat or ''
         db_tire.mevsim = tire.mevsim
         db_tire.dis_durumu = tire.dis_durumu
         db_tire.not_ = tire.not_
@@ -262,6 +275,20 @@ def update_tire(
         if tire.giris_tarihi:
             db_tire.giris_tarihi = tire.giris_tarihi
         db_tire.cikis_tarihi = tire.cikis_tarihi
+        
+        # Update multiple tire fields
+        db_tire.tire1_size = tire.tire1_size
+        db_tire.tire1_production_date = tire.tire1_production_date
+        db_tire.tire2_size = tire.tire2_size
+        db_tire.tire2_production_date = tire.tire2_production_date
+        db_tire.tire3_size = tire.tire3_size
+        db_tire.tire3_production_date = tire.tire3_production_date
+        db_tire.tire4_size = tire.tire4_size
+        db_tire.tire4_production_date = tire.tire4_production_date
+        db_tire.tire5_size = tire.tire5_size
+        db_tire.tire5_production_date = tire.tire5_production_date
+        db_tire.tire6_size = tire.tire6_size
+        db_tire.tire6_production_date = tire.tire6_production_date
         
         # Ensure durum is enum, not string
         # Convert from utils enum to model enum (they should match now, but be safe)
@@ -465,7 +492,20 @@ def format_tire_response(tire: Tire, db: Session) -> TireRead:
             cikis_tarihi=tire.cikis_tarihi,
             durum=durum_value,
             customer_name=customer_name,
-            customer_plate=customer_plate
+            customer_plate=customer_plate,
+            # Multiple tire support
+            tire1_size=tire.tire1_size,
+            tire1_production_date=tire.tire1_production_date,
+            tire2_size=tire.tire2_size,
+            tire2_production_date=tire.tire2_production_date,
+            tire3_size=tire.tire3_size,
+            tire3_production_date=tire.tire3_production_date,
+            tire4_size=tire.tire4_size,
+            tire4_production_date=tire.tire4_production_date,
+            tire5_size=tire.tire5_size,
+            tire5_production_date=tire.tire5_production_date,
+            tire6_size=tire.tire6_size,
+            tire6_production_date=tire.tire6_production_date
         )
     except Exception as e:
         import traceback

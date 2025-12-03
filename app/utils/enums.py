@@ -10,6 +10,7 @@ class MevsimEnum(str, Enum):
 
 class DisDurumuEnum(str, Enum):
     """Tire condition enum"""
+    SIFIR = "Sıfır"
     IYI = "İyi"
     ORTA = "Orta"
     KOTU = "Kötü"

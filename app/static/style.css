@@ -68,3 +68,51 @@ button:active {
 .card-hover:hover {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
+
+/* Tire Table Styles */
+.tire-table-container {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 70vh;
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tire-table {
+    min-width: 1400px;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: auto;
+}
+
+.tire-table-header {
+    background-color: #f9fafb;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.tire-table-header th {
+    background-color: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.tire-table-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.tire-table-row:hover {
+    background-color: #eff6ff !important;
+}
+
+.tire-table-row.selected {
+    background-color: #dbeafe !important;
+}
+
+.tire-table-row.selected:hover {
+    background-color: #bfdbfe !important;
+}
