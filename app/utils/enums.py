@@ -20,6 +20,13 @@ class TireDurumEnum(str, Enum):
     """Tire status enum"""
     DEPODA = "Depoda"
     CIKTI = "Çıkmış"
+    DEGISTIRILDI = "Değiştirildi"
+
+
+class IslemTuruEnum(str, Enum):
+    """Transaction type enum"""
+    LASTIK_DEGISTIRME = "Lastik Değişimi"
+    DEPODAN_CIKIS = "Depodan Çıkış"
 
 
 class RackDurumEnum(str, Enum):

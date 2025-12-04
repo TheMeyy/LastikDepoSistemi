@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.models.database import engine, Base
 from app.models import models  # Import models to register them with Base
-from app.routes import customer_routes, rack_routes, tire_routes, brand_routes, tire_size_routes, web_routes
+from app.routes import customer_routes, rack_routes, tire_routes, brand_routes, tire_size_routes, tire_history_routes, web_routes
 
 # Initialize FastAPI app
 app = FastAPI(title="LastikDepoSistemi", version="1.0.0")
@@ -26,6 +26,7 @@ app.include_router(rack_routes.router)
 app.include_router(tire_routes.router)
 app.include_router(brand_routes.router)
 app.include_router(tire_size_routes.router)
+app.include_router(tire_history_routes.router)
 app.include_router(web_routes.router)
 
 

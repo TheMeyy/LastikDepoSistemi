@@ -22,6 +22,12 @@ class DisDurumuEnum(str, enum.Enum):
 class TireDurumEnum(str, enum.Enum):
     DEPODA = "DEPODA"
     CIKTI = "CIKTI"
+    DEGISTIRILDI = "DEGISTIRILDI"
+
+
+class IslemTuruEnum(str, enum.Enum):
+    LASTIK_DEGISTIRME = "Lastik Değişimi"
+    DEPODAN_CIKIS = "Depodan Çıkış"
 
 
 class RackDurumEnum(str, enum.Enum):
@@ -104,4 +110,33 @@ class Tire(Base):
     customer = relationship("Customer", back_populates="tires")
     brand = relationship("Brand", back_populates="tires")
     rack = relationship("Rack", back_populates="tires")
+
+
+class TireHistory(Base):
+    __tablename__ = "tire_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    musteri_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
+    musteri_adi = Column(String, nullable=False)
+    plaka = Column(String, nullable=False)
+    telefon = Column(String, nullable=True)
+    islem_turu = Column(Enum(IslemTuruEnum, native_enum=False, length=50), nullable=False)
+    islem_tarihi = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+    # Eski lastik bilgileri (JSON string olarak saklanabilir veya ayrı alanlar)
+    eski_lastik_ebat = Column(Text, nullable=True)  # JSON string: [{"size": "195/55 R16", "year": "2024"}, ...]
+    eski_lastik_marka = Column(String, nullable=True)
+    eski_lastik_mevsim = Column(Enum(MevsimEnum, native_enum=False, length=20), nullable=True)  # Eski lastiğin mevsimi
+    eski_lastik_giris_tarihi = Column(DateTime(timezone=True), nullable=True)  # Eski lastiğin depoya giriş tarihi
+    
+    # Yeni lastik bilgileri
+    yeni_lastik_ebat = Column(Text, nullable=True)  # JSON string
+    yeni_lastik_marka = Column(String, nullable=True)
+    yeni_lastik_mevsim = Column(Enum(MevsimEnum, native_enum=False, length=20), nullable=True)  # Yeni lastiğin mevsimi
+    
+    raf_kodu = Column(String, nullable=True)
+    not_ = Column("not", Text, nullable=True)
+    
+    # Relationships
+    customer = relationship("Customer")
 

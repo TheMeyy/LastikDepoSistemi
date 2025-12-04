@@ -5,12 +5,40 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
 from app.models.database import get_db
-from app.models.models import Tire, Customer, Rack, Brand, TireSize
-from app.models.models import TireDurumEnum as ModelTireDurumEnum, DisDurumuEnum as ModelDisDurumuEnum
+from app.models.models import Tire, Customer, Rack, Brand, TireSize, TireHistory
+from app.models.models import TireDurumEnum as ModelTireDurumEnum, DisDurumuEnum as ModelDisDurumuEnum, MevsimEnum as ModelMevsimEnum
 from app.utils.enums import BRAND_LIST, TIRE_SIZES, TireDurumEnum, DisDurumuEnum
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func
 import os
+import unicodedata
+import re
+
+
+def normalize_turkish_text(text: str) -> str:
+    """
+    Türkçe karakterleri normalize eder ve lowercase'e çevirir.
+    Büyük/küçük harf duyarsız ve Türkçe karakter desteği için kullanılır.
+    """
+    if not text:
+        return ""
+    # Önce lowercase'e çevir
+    text = text.lower()
+    # Türkçe karakterleri normalize et (büyük ve küçük harfleri kapsar)
+    text = text.replace('ı', 'i')
+    text = text.replace('ş', 's')
+    text = text.replace('ğ', 'g')
+    text = text.replace('ü', 'u')
+    text = text.replace('ö', 'o')
+    text = text.replace('ç', 'c')
+    # Büyük harfli Türkçe karakterleri de normalize et (lowercase sonrası gerekli değil ama güvenlik için)
+    text = text.replace('İ', 'i')
+    text = text.replace('Ş', 's')
+    text = text.replace('Ğ', 'g')
+    text = text.replace('Ü', 'u')
+    text = text.replace('Ö', 'o')
+    text = text.replace('Ç', 'c')
+    return text
 
 router = APIRouter()
 
@@ -103,11 +131,18 @@ async def lastik_ara(
         
         # Apply filters
         if customer_name:
-            customers = db.query(Customer).filter(
-                Customer.ad_soyad.ilike(f"%{customer_name}%")
-            ).all()
-            if customers:
-                customer_ids = [c.id for c in customers]
+            # Türkçe karakter ve büyük/küçük harf duyarsız arama için normalize et
+            normalized_search = normalize_turkish_text(customer_name.strip())
+            # Tüm müşterileri al ve normalize ederek karşılaştır
+            all_customers = db.query(Customer).all()
+            matching_customers = []
+            for c in all_customers:
+                normalized_db_name = normalize_turkish_text(c.ad_soyad or "")
+                if normalized_search in normalized_db_name:
+                    matching_customers.append(c)
+            
+            if matching_customers:
+                customer_ids = [c.id for c in matching_customers]
                 query = query.filter(Tire.musteri_id.in_(customer_ids))
             else:
                 query = query.filter(Tire.id == -1)  # No results
@@ -208,14 +243,19 @@ async def lastik_ara(
                 # If apply_status_filter is False, don't filter by status (show all)
                 # Apply other filters...
                 if customer_name:
-                    customers = db.query(Customer).filter(
-                        Customer.ad_soyad.ilike(f"%{customer_name}%")
-                    ).all()
-                    if customers:
-                        customer_ids = [c.id for c in customers]
+                    # Türkçe karakter ve büyük/küçük harf duyarsız arama için normalize et
+                    normalized_search = normalize_turkish_text(customer_name)
+                    # Tüm müşterileri al ve normalize ederek karşılaştır
+                    all_customers = db.query(Customer).all()
+                    matching_customers = [
+                        c for c in all_customers 
+                        if normalized_search in normalize_turkish_text(c.ad_soyad)
+                    ]
+                    if matching_customers:
+                        customer_ids = [c.id for c in matching_customers]
                         tire_ids_query = tire_ids_query.filter(Tire.musteri_id.in_(customer_ids))
                     else:
-                        tire_ids_query = tire_ids_query.filter(Tire.id == -1)
+                        tire_ids_query = tire_ids_query.filter(Tire.id == -1)  # No results
                 if plate:
                     customer = db.query(Customer).filter(Customer.plaka.ilike(f"%{plate}%")).first()
                     if customer:
@@ -332,21 +372,96 @@ async def lastik_ara(
                 tire_sizes_list.append(tire.ebat)
                 tire_production_dates_list.append(None)
             
-            tire_list.append({
+            # Get mevsim (season) value - convert enum to display string
+            mevsim_display = ""
+            try:
+                mevsim_raw = getattr(tire, 'mevsim', None)
+                if mevsim_raw:
+                    # Check if it's an enum instance (ModelMevsimEnum or any enum)
+                    if isinstance(mevsim_raw, ModelMevsimEnum):
+                        mevsim_display = mevsim_raw.value
+                    # Check if it has a 'value' attribute (enum objects)
+                    elif hasattr(mevsim_raw, 'value'):
+                        mevsim_display = mevsim_raw.value
+                    # If it's already a string, use it directly
+                    elif isinstance(mevsim_raw, str):
+                        mevsim_display = mevsim_raw
+                    else:
+                        # Handle enum string representation like "MevsimEnum.YAZ" or "MevsimEnum('Yaz')"
+                        mevsim_str = str(mevsim_raw)
+                        mevsim_str_upper = mevsim_str.upper()
+                        
+                        # Try to extract value from enum representation using regex
+                        import re
+                        # Match patterns like "MevsimEnum('Yaz')" or "MevsimEnum.YAZ" or "Yaz"
+                        match = re.search(r"['\"]([^'\"]+)['\"]", mevsim_str)
+                        if match:
+                            extracted_value = match.group(1)
+                            # Map to correct display value
+                            if extracted_value.upper() in ['YAZ', 'Yaz']:
+                                mevsim_display = "Yaz"
+                            elif extracted_value.upper() in ['KIS', 'KIŞ', 'Kış']:
+                                mevsim_display = "Kış"
+                            elif '4' in extracted_value.upper() or 'DORT' in extracted_value.upper():
+                                mevsim_display = "4 Mevsim"
+                            else:
+                                mevsim_display = extracted_value
+                        elif 'YAZ' in mevsim_str_upper:
+                            mevsim_display = "Yaz"
+                        elif 'KIS' in mevsim_str_upper or 'KIŞ' in mevsim_str_upper:
+                            mevsim_display = "Kış"
+                        elif 'DORT_MEVSIM' in mevsim_str_upper or '4 MEVSIM' in mevsim_str_upper or ('4' in mevsim_str_upper and 'MEVSIM' in mevsim_str_upper):
+                            mevsim_display = "4 Mevsim"
+                        else:
+                            # Last resort: use string representation but clean it up
+                            mevsim_display = mevsim_str
+            except Exception as e:
+                print(f"Error converting tire.mevsim: {e}, type: {type(getattr(tire, 'mevsim', None))}, value: {getattr(tire, 'mevsim', None)}")
+                mevsim_display = ""
+            
+            tire_dict = {
                 "id": tire.id,
+                "customer_id": tire.musteri_id,  # Add customer_id for filtering
                 "customer_name": tire.customer.ad_soyad if tire.customer else "",
                 "customer_plate": tire.customer.plaka if tire.customer else "",
                 "ebat": tire.ebat,  # Keep for backward compatibility
                 "tire_sizes": tire_sizes_list,  # List of all tire sizes
                 "tire_production_dates": tire_production_dates_list,  # List of production dates
                 "brand": tire.brand.marka_adi if tire.brand else "",
+                "mevsim": mevsim_display,
                 "rack_code": tire.rack.kod if tire.rack else "",
                 "giris_tarihi": tire.giris_tarihi,
                 "cikis_tarihi": tire.cikis_tarihi,
                 "durum": durum_display,
                 "brand_note": brand_note,
                 "general_note": general_note
-            })
+            }
+            tire_list.append(tire_dict)
+        
+        # Filter: Keep only the latest tire per customer (by giris_tarihi)
+        # This ensures that when a tire is changed, only the new tire is shown, not the old one
+        customer_latest_tire = {}  # {customer_id: tire_dict}
+        for tire_dict in tire_list:
+            customer_id = tire_dict.get("customer_id")
+            if customer_id:
+                # If we haven't seen this customer, or this tire is newer, keep it
+                if customer_id not in customer_latest_tire:
+                    customer_latest_tire[customer_id] = tire_dict
+                else:
+                    # Compare giris_tarihi - keep the one with the latest date
+                    existing_date = customer_latest_tire[customer_id].get("giris_tarihi")
+                    current_date = tire_dict.get("giris_tarihi")
+                    if existing_date and current_date:
+                        if current_date > existing_date:
+                            customer_latest_tire[customer_id] = tire_dict
+                    elif current_date:  # If existing doesn't have date but current does, use current
+                        customer_latest_tire[customer_id] = tire_dict
+        
+        # Replace tire_list with filtered version (only latest per customer)
+        tire_list = list(customer_latest_tire.values())
+        # Sort by giris_tarihi descending again (in case order changed)
+        # Use a very old date for None values to ensure they go to the end
+        tire_list.sort(key=lambda x: x.get("giris_tarihi") or datetime(1900, 1, 1), reverse=True)
         
         # Prepare query params for template
         # If status is None or empty, default to "Depoda" for display
@@ -401,11 +516,31 @@ async def lastik_ara(
 
 
 @router.get("/yeni-lastik", response_class=HTMLResponse)
-async def yeni_lastik(request: Request, db: Session = Depends(get_db)):
-    """New tire entry page"""
-    # Get only empty racks, ordered by code
+async def yeni_lastik(
+    request: Request,
+    tire_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """New tire entry page - can be pre-filled with existing tire data"""
+    # Get racks - if tire_id provided, include the current rack even if full
     from app.utils.enums import RackDurumEnum
-    racks = db.query(Rack).filter(Rack.durum == RackDurumEnum.BOS).order_by(Rack.kod).all()
+    racks_query = db.query(Rack).filter(Rack.durum == RackDurumEnum.BOS)
+    
+    # If tire_id provided, also include the current rack
+    current_rack_id = None
+    if tire_id:
+        tire = db.query(Tire).filter(Tire.id == tire_id).first()
+        if tire and tire.raf_id:
+            from sqlalchemy import or_
+            current_rack_id = tire.raf_id
+            racks_query = db.query(Rack).filter(
+                or_(
+                    Rack.durum == RackDurumEnum.BOS,
+                    Rack.id == tire.raf_id
+                )
+            )
+    
+    racks = racks_query.order_by(Rack.kod).all()
     rack_list = [{"id": r.id, "kod": r.kod, "durum": r.durum.value if hasattr(r.durum, 'value') else str(r.durum)} for r in racks]
     
     # Get brands and tire sizes from database
@@ -415,12 +550,68 @@ async def yeni_lastik(request: Request, db: Session = Depends(get_db)):
     tire_sizes = db.query(TireSize).order_by(TireSize.ebat).all()
     tire_size_list = [size.ebat for size in tire_sizes]
     
+    # If tire_id provided, load existing tire data
+    existing_tire_data = None
+    if tire_id:
+        try:
+            tire = db.query(Tire).options(
+                joinedload(Tire.brand),
+                joinedload(Tire.customer),
+                joinedload(Tire.rack)
+            ).filter(Tire.id == tire_id).first()
+            
+            if tire:
+                # Collect tire sizes
+                tire_sizes_list = []
+                tire_production_dates_list = []
+                for i in range(1, 7):
+                    size = getattr(tire, f'tire{i}_size', None)
+                    prod_date = getattr(tire, f'tire{i}_production_date', None)
+                    if size:
+                        tire_sizes_list.append(size)
+                        tire_production_dates_list.append(prod_date)
+                
+                # If no tire sizes in tire1-tire6, use legacy ebat
+                if not tire_sizes_list and tire.ebat:
+                    tire_sizes_list.append(tire.ebat)
+                    tire_production_dates_list.append(None)
+                
+                # Parse not field
+                not_value = tire.not_ if tire.not_ else ""
+                brand_note = ""
+                general_note = ""
+                if not_value:
+                    parts = not_value.split("\n\n", 1)
+                    brand_note = parts[0] if len(parts) > 0 else ""
+                    general_note = parts[1] if len(parts) > 1 else ""
+                
+                existing_tire_data = {
+                    "tire_id": tire.id,
+                    "customer_name": tire.customer.ad_soyad if tire.customer else "",
+                    "customer_plate": tire.customer.plaka if tire.customer else "",
+                    "customer_phone": tire.customer.telefon if tire.customer else "",
+                    "musteri_id": tire.musteri_id,
+                    "brand": tire.brand.marka_adi if tire.brand else "",
+                    "mevsim": tire.mevsim.value if hasattr(tire.mevsim, 'value') else str(tire.mevsim),
+                    "dis_durumu": tire.dis_durumu.value if hasattr(tire.dis_durumu, 'value') else str(tire.dis_durumu),
+                    "raf_id": tire.raf_id,
+                    "raf_kodu": tire.rack.kod if tire.rack else "",
+                    "brand_note": brand_note,
+                    "general_note": general_note,
+                    "tire_sizes": tire_sizes_list,
+                    "tire_production_dates": tire_production_dates_list
+                }
+        except Exception as e:
+            print(f"Error loading tire data: {e}")
+            existing_tire_data = None
+    
     template = templates.get_template("yeni_lastik.html")
     return HTMLResponse(content=template.render(
         request=request,
         brands=brand_list,
         tire_sizes=tire_size_list,
         racks=rack_list,
+        existing_tire_data=existing_tire_data,
         current_path="/yeni-lastik"
     ))
 
@@ -439,7 +630,19 @@ async def musteriler(
     
     # Apply filters
     if customer_name:
-        query = query.filter(Customer.ad_soyad.ilike(f"%{customer_name}%"))
+        # Türkçe karakter ve büyük/küçük harf duyarsız arama için normalize et
+        normalized_search = normalize_turkish_text(customer_name)
+        # Tüm müşterileri al ve normalize ederek karşılaştır
+        all_customers = db.query(Customer).all()
+        matching_customers = [
+            c for c in all_customers 
+            if normalized_search in normalize_turkish_text(c.ad_soyad)
+        ]
+        if matching_customers:
+            customer_ids = [c.id for c in matching_customers]
+            query = query.filter(Customer.id.in_(customer_ids))
+        else:
+            query = query.filter(Customer.id == -1)  # No results
     
     if plate:
         query = query.filter(Customer.plaka.ilike(f"%{plate}%"))
@@ -619,7 +822,14 @@ async def raflar(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/lastik-etiketleri", response_class=HTMLResponse)
-async def lastik_etiketleri(request: Request, db: Session = Depends(get_db)):
+async def lastik_etiketleri(
+    request: Request,
+    customer_name: Optional[str] = Query(None),
+    plate: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
     """Lastik Etiketleri page - List recent tires for label creation"""
     try:
         # Get all tires ordered by entry date descending (most recent first)
@@ -629,7 +839,43 @@ async def lastik_etiketleri(request: Request, db: Session = Depends(get_db)):
                 joinedload(Tire.brand),
                 joinedload(Tire.customer),
                 joinedload(Tire.rack)
-            ).order_by(Tire.giris_tarihi.desc())
+            )
+            
+            # Apply filters
+            # Join Customer only if we need to filter by customer fields
+            if customer_name or plate:
+                query = query.join(Customer)
+                if customer_name:
+                    # Türkçe karakter ve büyük/küçük harf duyarsız arama için normalize et
+                    normalized_search = normalize_turkish_text(customer_name)
+                    # Tüm müşterileri al ve normalize ederek karşılaştır
+                    all_customers = db.query(Customer).all()
+                    matching_customer_ids = [
+                        c.id for c in all_customers 
+                        if normalized_search in normalize_turkish_text(c.ad_soyad)
+                    ]
+                    if matching_customer_ids:
+                        query = query.filter(Tire.musteri_id.in_(matching_customer_ids))
+                    else:
+                        query = query.filter(Tire.id == -1)  # No results
+                if plate:
+                    query = query.filter(
+                        Customer.plaka.ilike(f"%{plate}%")
+                    )
+            if date_from:
+                try:
+                    date_from_obj = datetime.fromisoformat(date_from)
+                    query = query.filter(Tire.giris_tarihi >= date_from_obj)
+                except ValueError:
+                    pass
+            if date_to:
+                try:
+                    date_to_obj = datetime.fromisoformat(date_to)
+                    query = query.filter(Tire.giris_tarihi <= date_to_obj)
+                except ValueError:
+                    pass
+            
+            query = query.order_by(Tire.giris_tarihi.desc())
             
             # Limit to last 100 tires for performance
             tires = query.limit(100).all()
@@ -684,21 +930,63 @@ async def lastik_etiketleri(request: Request, db: Session = Depends(get_db)):
                 print(f"Error converting tire.durum in lastik_etiketleri: {e}")
                 durum_display = "Depoda"
             
+            # Collect all tire sizes
+            tire_sizes = []
+            for i in range(1, 7):
+                size = getattr(tire, f'tire{i}_size', None)
+                if size and str(size).strip():
+                    tire_sizes.append(str(size).strip())
+            
+            # If no tire sizes found in tire1-tire6, use legacy ebat field
+            if not tire_sizes and tire.ebat:
+                tire_sizes.append(str(tire.ebat).strip())
+            
+            # Get rack code
+            rack_code = tire.rack.kod if tire.rack else ""
+            
+            # Get dis durumu (tire condition)
+            dis_durumu_display = ""
+            try:
+                dis_durumu_raw = getattr(tire, 'dis_durumu', None)
+                if dis_durumu_raw:
+                    if isinstance(dis_durumu_raw, ModelDisDurumuEnum):
+                        dis_durumu_display = dis_durumu_raw.value
+                    elif isinstance(dis_durumu_raw, str):
+                        dis_durumu_display = dis_durumu_raw
+                    elif hasattr(dis_durumu_raw, 'value'):
+                        dis_durumu_display = dis_durumu_raw.value
+            except Exception as e:
+                print(f"Error converting dis_durumu: {e}")
+                dis_durumu_display = ""
+            
+            import json
             tire_list.append({
                 "id": tire.id,
                 "customer_name": tire.customer.ad_soyad if tire.customer else "",
                 "customer_phone": tire.customer.telefon if tire.customer else "",
                 "customer_plate": tire.customer.plaka if tire.customer else "",
                 "ebat": tire.ebat,
+                "tire_sizes": tire_sizes,  # List of all tire sizes
+                "tire_sizes_json": json.dumps(tire_sizes) if tire_sizes else "[]",  # JSON string for template
                 "brand": tire.brand.marka_adi if tire.brand else "",
+                "rack_code": rack_code,
+                "dis_durumu": dis_durumu_display,
                 "giris_tarihi": tire.giris_tarihi,
                 "durum": durum_display
             })
+        
+        query_params = {
+            "customer_name": customer_name or "",
+            "plate": plate or "",
+            "date_from": date_from or "",
+            "date_to": date_to or ""
+        }
         
         template = templates.get_template("lastik_etiketleri.html")
         return HTMLResponse(content=template.render(
             request=request,
             tires=tire_list,
+            query_params=query_params,
             current_path="/lastik-etiketleri"
         ))
     except Exception as e:
@@ -706,10 +994,172 @@ async def lastik_etiketleri(request: Request, db: Session = Depends(get_db)):
         error_trace = traceback.format_exc()
         print(f"Error in lastik_etiketleri endpoint: {error_trace}")
         # Return empty list on error
+        query_params = {
+            "customer_name": "",
+            "plate": "",
+            "date_from": "",
+            "date_to": ""
+        }
         template = templates.get_template("lastik_etiketleri.html")
         return HTMLResponse(content=template.render(
             request=request,
             tires=[],
+            query_params=query_params,
             current_path="/lastik-etiketleri"
+        ))
+
+
+@router.get("/musteri-gecmisi", response_class=HTMLResponse)
+async def musteri_gecmisi(
+    request: Request,
+    customer_name: Optional[str] = Query(None),
+    plate: Optional[str] = Query(None),
+    phone: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Customer history page"""
+    try:
+        # Query directly from database
+        query = db.query(TireHistory)
+        
+        if customer_name:
+            query = query.filter(TireHistory.musteri_adi.ilike(f"%{customer_name}%"))
+        if plate:
+            query = query.filter(TireHistory.plaka.ilike(f"%{plate}%"))
+        if phone:
+            query = query.filter(TireHistory.telefon.ilike(f"%{phone}%"))
+        if date_from:
+            try:
+                date_from_obj = datetime.fromisoformat(date_from)
+                query = query.filter(TireHistory.islem_tarihi >= date_from_obj)
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                date_to_obj = datetime.fromisoformat(date_to)
+                query = query.filter(TireHistory.islem_tarihi <= date_to_obj)
+            except ValueError:
+                pass
+        
+        # Try to query with mevsim columns, but handle case where they don't exist yet
+        import json
+        history_items = []
+        try:
+            history_items_raw = query.order_by(TireHistory.islem_tarihi.desc()).limit(100).all()
+        except Exception as e:
+            # If mevsim columns don't exist, query without them using raw SQL
+            print(f"Warning: Mevsim columns may not exist. Using fallback query. Error: {e}")
+            from sqlalchemy import text
+            sql_query = text("""
+                SELECT id, musteri_id, musteri_adi, plaka, telefon, islem_turu, islem_tarihi,
+                       eski_lastik_ebat, eski_lastik_marka, eski_lastik_giris_tarihi,
+                       yeni_lastik_ebat, yeni_lastik_marka, raf_kodu, "not"
+                FROM tire_history
+                ORDER BY islem_tarihi DESC
+                LIMIT 100
+            """)
+            result = db.execute(sql_query)
+            history_items_raw = result.fetchall()
+            # Convert to dict-like objects
+            class TempHistoryItem:
+                def __init__(self, row):
+                    self.id = row.id
+                    self.musteri_id = row.musteri_id
+                    self.musteri_adi = row.musteri_adi
+                    self.plaka = row.plaka
+                    self.telefon = row.telefon
+                    self.islem_turu = row.islem_turu
+                    self.islem_tarihi = row.islem_tarihi
+                    self.eski_lastik_ebat = row.eski_lastik_ebat
+                    self.eski_lastik_marka = row.eski_lastik_marka
+                    self.eski_lastik_giris_tarihi = row.eski_lastik_giris_tarihi
+                    self.yeni_lastik_ebat = row.yeni_lastik_ebat
+                    self.yeni_lastik_marka = row.yeni_lastik_marka
+                    self.raf_kodu = row.raf_kodu
+                    self.not_ = row.not_
+                    self.eski_lastik_mevsim = None
+                    self.yeni_lastik_mevsim = None
+            history_items_raw = [TempHistoryItem(row) for row in history_items_raw]
+        
+        for item in history_items_raw:
+            eski_ebat_list = []
+            yeni_ebat_list = []
+            if item.eski_lastik_ebat:
+                try:
+                    eski_ebat_list = json.loads(item.eski_lastik_ebat)
+                except:
+                    pass
+            if item.yeni_lastik_ebat:
+                try:
+                    yeni_ebat_list = json.loads(item.yeni_lastik_ebat)
+                except:
+                    pass
+            
+            # Get mevsim values - handle case where columns don't exist yet
+            eski_mevsim = None
+            yeni_mevsim = None
+            try:
+                if hasattr(item, 'eski_lastik_mevsim') and item.eski_lastik_mevsim:
+                    if hasattr(item.eski_lastik_mevsim, 'value'):
+                        eski_mevsim = item.eski_lastik_mevsim.value
+                    else:
+                        eski_mevsim = str(item.eski_lastik_mevsim)
+            except (AttributeError, KeyError):
+                pass
+            
+            try:
+                if hasattr(item, 'yeni_lastik_mevsim') and item.yeni_lastik_mevsim:
+                    if hasattr(item.yeni_lastik_mevsim, 'value'):
+                        yeni_mevsim = item.yeni_lastik_mevsim.value
+                    else:
+                        yeni_mevsim = str(item.yeni_lastik_mevsim)
+            except (AttributeError, KeyError):
+                pass
+            
+            history_items.append({
+                "id": item.id,
+                "musteri_adi": item.musteri_adi,
+                "plaka": item.plaka,
+                "telefon": item.telefon,
+                "islem_turu": item.islem_turu.value if hasattr(item.islem_turu, 'value') else str(item.islem_turu),
+                "islem_tarihi": item.islem_tarihi,
+                "eski_lastik_ebat": eski_ebat_list,
+                "eski_lastik_marka": item.eski_lastik_marka,
+                "eski_lastik_mevsim": eski_mevsim,
+                "eski_lastik_giris_tarihi": item.eski_lastik_giris_tarihi,
+                "yeni_lastik_ebat": yeni_ebat_list,
+                "yeni_lastik_marka": item.yeni_lastik_marka,
+                "yeni_lastik_mevsim": yeni_mevsim,
+                "raf_kodu": item.raf_kodu,
+                "not": item.not_
+            })
+        
+        query_params = {
+            "customer_name": customer_name or "",
+            "plate": plate or "",
+            "phone": phone or "",
+            "date_from": date_from or "",
+            "date_to": date_to or ""
+        }
+        
+        template = templates.get_template("musteri_gecmisi.html")
+        return HTMLResponse(content=template.render(
+            request=request,
+            history_items=history_items,
+            query_params=query_params,
+            current_path="/musteri-gecmisi"
+        ))
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error in musteri_gecmisi endpoint: {error_trace}")
+        template = templates.get_template("musteri_gecmisi.html")
+        return HTMLResponse(content=template.render(
+            request=request,
+            history_items=[],
+            query_params={},
+            current_path="/musteri-gecmisi"
         ))
 

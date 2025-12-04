@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_
 from typing import List, Optional
 from datetime import datetime
 from app.models.database import get_db
-from app.models.models import Tire, Brand, Customer, Rack
+from app.models.models import Tire, Brand, Customer, Rack, TireHistory
 from app.models.models import TireDurumEnum as ModelTireDurumEnum
+from app.models.models import IslemTuruEnum as ModelIslemTuruEnum
 from app.schemas.tire_schema import TireCreate, TireRead
-from app.utils.enums import TireDurumEnum, MevsimEnum, DisDurumuEnum, BRAND_LIST, RackDurumEnum
+from app.utils.enums import TireDurumEnum, MevsimEnum, DisDurumuEnum, BRAND_LIST, RackDurumEnum, IslemTuruEnum
+import json
 
 router = APIRouter(prefix="/api/tires", tags=["tires"])
 
@@ -347,6 +349,27 @@ def update_tire(
         # If tire is "Çıkmış" (Exited), set rack to "Boş" (Empty)
         # Use model enum for comparison
         if db_tire.durum == ModelTireDurumEnum.CIKTI:
+            # Create history entry for exit
+            exit_customer = db.query(Customer).filter(Customer.id == db_tire.musteri_id).first()
+            if exit_customer:
+                # Create a "dummy" new tire for history (same as old but status changed)
+                # We need to reload db_tire with relationships for history
+                # joinedload is already imported at the top of the file
+                db_tire_with_rels = db.query(Tire).options(
+                    joinedload(Tire.brand),
+                    joinedload(Tire.customer),
+                    joinedload(Tire.rack)
+                ).filter(Tire.id == tire_id).first()
+                if db_tire_with_rels:
+                    create_tire_history_entry(
+                        db=db,
+                        old_tire=db_tire_with_rels,
+                        new_tire=db_tire_with_rels,  # Same tire, just status changed
+                        islem_turu=ModelIslemTuruEnum.DEPODAN_CIKIS,
+                        customer=exit_customer,
+                        not_=tire.not_
+                    )
+            
             if old_rack:
                 # Check if there are other tires in this rack
                 from sqlalchemy import func
@@ -378,7 +401,7 @@ def update_tire(
         db.refresh(db_tire)
         
         # Reload with relationships
-        from sqlalchemy.orm import joinedload
+        # joinedload is already imported at the top of the file
         db_tire = db.query(Tire).options(
             joinedload(Tire.brand),
             joinedload(Tire.customer),
@@ -513,4 +536,183 @@ def format_tire_response(tire: Tire, db: Session) -> TireRead:
         print(f"Error in format_tire_response: {error_trace}")
         print(f"Tire durum type: {type(tire.durum)}, value: {tire.durum}")
         raise
+
+
+def create_tire_history_entry(
+    db: Session,
+    old_tire: Tire,
+    new_tire: Tire,
+    islem_turu: ModelIslemTuruEnum,
+    customer: Customer,
+    not_: Optional[str] = None
+):
+    """Create a tire history entry"""
+    # Collect old tire sizes
+    old_tire_sizes = []
+    for i in range(1, 7):
+        size = getattr(old_tire, f'tire{i}_size', None)
+        prod_date = getattr(old_tire, f'tire{i}_production_date', None)
+        if size:
+            old_tire_sizes.append({"size": size, "year": prod_date})
+    
+    # Collect new tire sizes
+    new_tire_sizes = []
+    for i in range(1, 7):
+        size = getattr(new_tire, f'tire{i}_size', None)
+        prod_date = getattr(new_tire, f'tire{i}_production_date', None)
+        if size:
+            new_tire_sizes.append({"size": size, "year": prod_date})
+    
+    # Get brand names
+    old_brand_name = old_tire.brand.marka_adi if old_tire.brand else ""
+    
+    # For new tire, get brand by marka_id since relationship might not be loaded yet
+    new_brand_name = ""
+    if hasattr(new_tire, 'marka_id') and new_tire.marka_id:
+        new_brand = db.query(Brand).filter(Brand.id == new_tire.marka_id).first()
+        if new_brand:
+            new_brand_name = new_brand.marka_adi
+    elif new_tire.brand:
+        new_brand_name = new_tire.brand.marka_adi
+    
+    # Get rack code
+    rack_code = new_tire.rack.kod if new_tire.rack else (old_tire.rack.kod if old_tire.rack else "")
+    
+    # Get old tire entry date
+    eski_giris_tarihi = old_tire.giris_tarihi if old_tire.giris_tarihi else None
+    
+    # Get mevsim (season) values
+    eski_lastik_mevsim = old_tire.mevsim if old_tire.mevsim else None
+    yeni_lastik_mevsim = new_tire.mevsim if new_tire.mevsim else None
+    
+    history_entry = TireHistory(
+        musteri_id=customer.id,
+        musteri_adi=customer.ad_soyad,
+        plaka=customer.plaka,
+        telefon=customer.telefon,
+        islem_turu=islem_turu,
+        eski_lastik_ebat=json.dumps(old_tire_sizes) if old_tire_sizes else None,
+        eski_lastik_marka=old_brand_name,
+        eski_lastik_mevsim=eski_lastik_mevsim,
+        eski_lastik_giris_tarihi=eski_giris_tarihi,
+        yeni_lastik_ebat=json.dumps(new_tire_sizes) if new_tire_sizes else None,
+        yeni_lastik_marka=new_brand_name,
+        yeni_lastik_mevsim=yeni_lastik_mevsim,
+        raf_kodu=rack_code,
+        not_=not_
+    )
+    db.add(history_entry)
+    return history_entry
+
+
+@router.post("/{tire_id}/change", response_model=TireRead, status_code=status.HTTP_201_CREATED)
+def change_tire(
+    tire_id: int,
+    tire: TireCreate,
+    db: Session = Depends(get_db)
+):
+    """Change tire - mark old as changed and create new entry"""
+    try:
+        # Get old tire with relationships
+        old_tire = db.query(Tire).options(
+            joinedload(Tire.brand),
+            joinedload(Tire.customer),
+            joinedload(Tire.rack)
+        ).filter(Tire.id == tire_id).first()
+        
+        if not old_tire:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Tire with ID {tire_id} not found"
+            )
+        
+        # Validate customer exists
+        customer = db.query(Customer).filter(Customer.id == tire.musteri_id).first()
+        if not customer:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Customer with ID {tire.musteri_id} not found"
+            )
+        
+        # Validate rack exists
+        rack = db.query(Rack).filter(Rack.id == tire.raf_id).first()
+        if not rack:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Rack with ID {tire.raf_id} not found"
+            )
+        
+        # Get or create brand
+        brand = get_or_create_brand(db, tire.brand)
+        
+        # Mark old tire as changed
+        old_tire.durum = ModelTireDurumEnum.DEGISTIRILDI
+        db.add(old_tire)
+        
+        # Create new tire
+        entry_date = tire.giris_tarihi if tire.giris_tarihi else datetime.now()
+        
+        durum_value = ModelTireDurumEnum.DEPODA
+        
+        new_tire = Tire(
+            musteri_id=tire.musteri_id,
+            marka_id=brand.id,
+            ebat=tire.ebat or '',
+            mevsim=tire.mevsim,
+            dis_durumu=tire.dis_durumu,
+            not_=tire.not_,
+            raf_id=tire.raf_id,
+            giris_tarihi=entry_date,
+            cikis_tarihi=tire.cikis_tarihi,
+            durum=durum_value,
+            tire1_size=tire.tire1_size,
+            tire1_production_date=tire.tire1_production_date,
+            tire2_size=tire.tire2_size,
+            tire2_production_date=tire.tire2_production_date,
+            tire3_size=tire.tire3_size,
+            tire3_production_date=tire.tire3_production_date,
+            tire4_size=tire.tire4_size,
+            tire4_production_date=tire.tire4_production_date,
+            tire5_size=tire.tire5_size,
+            tire5_production_date=tire.tire5_production_date,
+            tire6_size=tire.tire6_size,
+            tire6_production_date=tire.tire6_production_date
+        )
+        db.add(new_tire)
+        
+        # Rack stays full (doesn't change status)
+        # No need to update rack status
+        
+        # Create history entry
+        create_tire_history_entry(
+            db=db,
+            old_tire=old_tire,
+            new_tire=new_tire,
+            islem_turu=ModelIslemTuruEnum.LASTIK_DEGISTIRME,
+            customer=customer,
+            not_=tire.not_
+        )
+        
+        db.commit()
+        db.refresh(new_tire)
+        
+        # Reload with relationships
+        new_tire = db.query(Tire).options(
+            joinedload(Tire.brand),
+            joinedload(Tire.customer),
+            joinedload(Tire.rack)
+        ).filter(Tire.id == new_tire.id).first()
+        
+        return format_tire_response(new_tire, db)
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error changing tire: {error_trace}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error changing tire: {str(e)}"
+        )
 

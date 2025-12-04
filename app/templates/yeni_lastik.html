@@ -311,8 +311,64 @@ function showErrorModal(message) {
 
 // Initialize: Add first tire field on page load
 document.addEventListener('DOMContentLoaded', function() {
-    // Add initial tire field
-    addTireField();
+    // Check if we have existing tire data to pre-fill
+    const existingTireData = {{ existing_tire_data | tojson if existing_tire_data else 'null' }};
+    
+    if (existingTireData) {
+        // Pre-fill customer information
+        document.getElementById('customer_name').value = existingTireData.customer_name || '';
+        document.getElementById('customer_plate').value = existingTireData.customer_plate || '';
+        document.getElementById('customer_phone').value = existingTireData.customer_phone || '';
+        
+        // Pre-fill tire information
+        if (existingTireData.brand) {
+            document.getElementById('brand').value = existingTireData.brand;
+        }
+        if (existingTireData.mevsim) {
+            document.getElementById('mevsim').value = existingTireData.mevsim;
+        }
+        if (existingTireData.dis_durumu) {
+            document.getElementById('dis_durumu').value = existingTireData.dis_durumu;
+        }
+        if (existingTireData.raf_id) {
+            document.getElementById('raf_id').value = existingTireData.raf_id;
+        }
+        if (existingTireData.brand_note) {
+            document.getElementById('brand_note').value = existingTireData.brand_note;
+        }
+        if (existingTireData.general_note) {
+            document.getElementById('not').value = existingTireData.general_note;
+        }
+        
+        // Pre-fill tire sizes
+        if (existingTireData.tire_sizes && existingTireData.tire_sizes.length > 0) {
+            // Clear container first
+            document.getElementById('tiresContainer').innerHTML = '';
+            tireCount = 0;
+            
+            // Add tire fields for each existing tire
+            existingTireData.tire_sizes.forEach((size, index) => {
+                addTireField();
+                const tireItem = document.querySelector(`[data-tire-index="${tireCount}"]`);
+                if (tireItem) {
+                    const sizeSelect = tireItem.querySelector('select[id$="_size"]');
+                    const yearInput = tireItem.querySelector('input[id$="_production_date"]');
+                    if (sizeSelect) {
+                        sizeSelect.value = size;
+                    }
+                    if (yearInput && existingTireData.tire_production_dates && existingTireData.tire_production_dates[index]) {
+                        yearInput.value = existingTireData.tire_production_dates[index];
+                    }
+                }
+            });
+        } else {
+            // Add initial tire field if no existing data
+            addTireField();
+        }
+    } else {
+        // Add initial tire field
+        addTireField();
+    }
     
     // Raf seçildiğinde durumunu göster
     const rafSelect = document.getElementById('raf_id');
@@ -602,14 +658,31 @@ document.addEventListener('DOMContentLoaded', function() {
             // Debug: Log the data being sent
             console.log('Sending tire data:', tireData);
             
+            // Check if this is a tire change operation
+            const existingTireData = {{ existing_tire_data | tojson if existing_tire_data else 'null' }};
+            const isChangeOperation = existingTireData && existingTireData.tire_id;
+            
             try {
-                const response = await fetch('/api/tires/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(tireData)
-                });
+                let response;
+                if (isChangeOperation) {
+                    // Use change endpoint
+                    response = await fetch(`/api/tires/${existingTireData.tire_id}/change`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(tireData)
+                    });
+                } else {
+                    // Use create endpoint
+                    response = await fetch('/api/tires/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(tireData)
+                    });
+                }
                 
                 if (response.ok) {
                     // Show success message
