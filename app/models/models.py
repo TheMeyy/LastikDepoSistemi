@@ -81,6 +81,7 @@ class Tire(Base):
     __tablename__ = "tires"
 
     id = Column(Integer, primary_key=True, index=True)
+    seri_no = Column(Integer, nullable=False, unique=True, index=True)  # Otomatik artan seri numarası
     musteri_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
     marka_id = Column(Integer, ForeignKey("brands.id"), nullable=False)
     ebat = Column(String, nullable=False)  # Deprecated: kept for backward compatibility
@@ -128,11 +129,13 @@ class TireHistory(Base):
     eski_lastik_marka = Column(String, nullable=True)
     eski_lastik_mevsim = Column(Enum(MevsimEnum, native_enum=False, length=20), nullable=True)  # Eski lastiğin mevsimi
     eski_lastik_giris_tarihi = Column(DateTime(timezone=True), nullable=True)  # Eski lastiğin depoya giriş tarihi
+    eski_seri_no = Column(Integer, nullable=True)  # Eski lastiğin seri numarası
     
     # Yeni lastik bilgileri
     yeni_lastik_ebat = Column(Text, nullable=True)  # JSON string
     yeni_lastik_marka = Column(String, nullable=True)
     yeni_lastik_mevsim = Column(Enum(MevsimEnum, native_enum=False, length=20), nullable=True)  # Yeni lastiğin mevsimi
+    yeni_seri_no = Column(Integer, nullable=True)  # Yeni lastiğin seri numarası
     
     raf_kodu = Column(String, nullable=True)
     not_ = Column("not", Text, nullable=True)

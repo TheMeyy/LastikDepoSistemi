@@ -36,3 +36,5 @@ def create_tire_size(tire_size: TireSizeCreate, db: Session = Depends(get_db)):
     
     return {"id": new_size.id, "ebat": new_size.ebat}
 
+
+

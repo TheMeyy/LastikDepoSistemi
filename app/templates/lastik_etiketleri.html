@@ -45,10 +45,12 @@ window.handleLabelButtonClick = function(button, tireSizesFromTemplate) {
         }
         
         const tireId = parseInt(button.getAttribute('data-tire-id')) || 0;
+        const seriNo = button.getAttribute('data-seri-no') || '';
         const customerName = button.getAttribute('data-customer-name') || '';
         const customerPhone = button.getAttribute('data-customer-phone') || '';
         const customerPlate = button.getAttribute('data-customer-plate') || '';
         const brand = button.getAttribute('data-brand') || '';
+        const mevsim = button.getAttribute('data-mevsim') || '';
         const rackCode = button.getAttribute('data-rack-code') || '';
         const disDurumu = button.getAttribute('data-dis-durumu') || '';
         const girisTarihi = button.getAttribute('data-giris-tarihi') || '';
@@ -76,13 +78,14 @@ window.handleLabelButtonClick = function(button, tireSizesFromTemplate) {
         }
         
         console.log('Final tireSizes array:', tireSizes, 'length:', tireSizes.length);
+        console.log('Seri No:', seriNo);
         
         // Call the real showLabelPreview function
         if (typeof window._realShowLabelPreview === 'function') {
-            window._realShowLabelPreview(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, rackCode, disDurumu, girisTarihi);
+            window._realShowLabelPreview(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, mevsim, rackCode, disDurumu, girisTarihi, seriNo);
         } else {
             // Fallback to window.showLabelPreview (stub)
-            window.showLabelPreview(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, rackCode, disDurumu, girisTarihi);
+            window.showLabelPreview(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, mevsim, rackCode, disDurumu, girisTarihi, seriNo);
         }
     } catch (error) {
         console.error('Error in handleLabelButtonClick:', error);
@@ -91,7 +94,7 @@ window.handleLabelButtonClick = function(button, tireSizesFromTemplate) {
 };
 
 // Define a stub showLabelPreview that will wait for the real one
-window.showLabelPreview = function(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, rackCode, disDurumu, girisTarihi) {
+window.showLabelPreview = function(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, mevsim, rackCode, disDurumu, girisTarihi, seriNo) {
     // This is a placeholder - the real function will be defined in scripts block
     console.log('showLabelPreview stub called - waiting for real function');
     
@@ -171,6 +174,19 @@ console.log('showLabelPreview stub function defined:', typeof window.showLabelPr
         flex-direction: column;
         align-items: center;
         padding-top: 2mm;
+        position: relative;
+    }
+    
+    .label-seri-no {
+        position: absolute;
+        top: 0;
+        right: 0;
+        font-size: 8pt;
+        font-weight: 700;
+        color: #333;
+        font-family: 'Poppins', sans-serif;
+        z-index: 10;
+        white-space: nowrap;
     }
     
     .label-logo {
@@ -393,10 +409,12 @@ console.log('showLabelPreview stub function defined:', typeof window.showLabelPr
                                         class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors shadow-sm create-label-btn"
                                         onclick="handleLabelButtonClickSafe(this)"
                                         data-tire-id="{{ tire.id }}"
+                                        data-seri-no="{{ tire.seri_no if tire.seri_no else '' }}"
                                         data-customer-name="{{ tire.customer_name|replace("'", "&#39;")|replace('"', '&quot;') }}"
                                         data-customer-phone="{{ tire.customer_phone|replace("'", "&#39;")|replace('"', '&quot;') }}"
                                         data-customer-plate="{{ tire.customer_plate|replace("'", "&#39;")|replace('"', '&quot;') }}"
                                         data-brand="{{ tire.brand|replace("'", "&#39;")|replace('"', '&quot;') }}"
+                                        data-mevsim="{{ tire.mevsim|replace("'", "&#39;")|replace('"', '&quot;') if tire.mevsim else '' }}"
                                         data-rack-code="{{ tire.rack_code|replace("'", "&#39;")|replace('"', '&quot;') }}"
                                         data-dis-durumu="{{ tire.dis_durumu|replace("'", "&#39;")|replace('"', '&quot;') }}"
                                         data-giris-tarihi="{{ tire.giris_tarihi.strftime('%d.%m.%Y') if tire.giris_tarihi else '' }}">
@@ -474,9 +492,9 @@ if (typeof window.handleLabelButtonClick === 'undefined') {
 
 
 // Make showLabelPreview globally available - this is the real implementation
-window._realShowLabelPreview = function(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, rackCode, disDurumu, girisTarihi) {
+window._realShowLabelPreview = function(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, mevsim, rackCode, disDurumu, girisTarihi, seriNo) {
     try {
-        console.log('_realShowLabelPreview called with:', { tireId, customerName, tireSizes, brand, rackCode, disDurumu });
+        console.log('_realShowLabelPreview called with:', { tireId, customerName, tireSizes, brand, mevsim, rackCode, disDurumu, seriNo });
         
         // Also update window.showLabelPreview to point to this function
         window.showLabelPreview = window._realShowLabelPreview;
@@ -505,10 +523,12 @@ window._realShowLabelPreview = function(tireId, customerName, customerPhone, cus
             customerPhone: customerPhone || '',
             customerPlate: customerPlate || '',
             brand: brand || '',
+            mevsim: mevsim || '', // Mevsim bilgisi
             rackCode: rackCode || '',
             disDurumu: disDurumu || '',
             girisTarihi: girisTarihi || '',
-            tireSizes: tireSizesArray
+            tireSizes: tireSizesArray,
+            seriNo: seriNo || '' // Müşterinin seri numarası - tüm etiketlerde aynı
         };
         
         console.log('showLabelPreview - tireSizesArray:', tireSizesArray, 'length:', tireSizesArray.length);
@@ -547,12 +567,14 @@ function getLabelData() {
         customerName: '',
         customerPhone: '',
         brand: '',
+        mevsim: '', // Mevsim bilgisi
         ebat: '',
         tireSizes: [],
         rackCode: '',
         disDurumu: '',
         customerPlate: '',
-        girisTarihi: ''
+        girisTarihi: '',
+        seriNo: '' // Müşterinin seri numarası
     };
     
     // Ensure tireSizes is an array
@@ -662,13 +684,16 @@ function generateLabels() {
         const labelData = { ...data };
         labelData.tireSizes = tireSizesArray;
         
+        // Müşterinin seri numarası - tüm etiketlerde aynı
+        const seriNo = data.seriNo || '';
+        
         for (let row = 0; row < rowCount; row++) {
             const colsInThisRow = (depotLabelCount === 5 && row === 3) ? 1 : cols;
             for (let col = 0; col < colsInThisRow && (row * cols + col) < depotLabelCount; col++) {
                 const index = row * cols + col;
                 const tireSize = tireSizesArray[index] || data.ebat || '';
-                // Pass all tire sizes to each label so they can display all sizes
-                html += createDepoLabel(labelData, tireSize, labelWidth, labelHeight);
+                // Tüm depo etiketlerinde müşterinin seri numarası gösterilecek
+                html += createDepoLabel(labelData, tireSize, labelWidth, labelHeight, seriNo);
             }
         }
         
@@ -679,8 +704,8 @@ function generateLabels() {
         html += '<div class="mb-4">';
         html += '<h3 class="text-lg font-semibold text-gray-800 mb-4 text-center no-print">Müşteri ve İşyeri Etiketleri</h3>';
         html += '<div class="flex justify-center gap-8">';
-        html += createMusteriLabel(data, labelWidth, labelHeight);
-        html += createIsyeriLabel(data, labelWidth, labelHeight);
+        html += createMusteriLabel(data, labelWidth, labelHeight, seriNo); // Müşteri etiketi için müşterinin seri no'su
+        html += createIsyeriLabel(data, labelWidth, labelHeight, seriNo); // İşyeri etiketi için müşterinin seri no'su
         html += '</div>';
         html += '</div>';
         
@@ -697,7 +722,7 @@ function updateLabels() {
     generateLabels();
 }
 
-function createDepoLabel(data, tireSize, width, height) {
+function createDepoLabel(data, tireSize, width, height, seriNo) {
     // Format all tire sizes in a grid (2 columns)
     let tireSizesHtml = '';
     console.log('createDepoLabel - data.tireSizes:', data.tireSizes, 'tireSize:', tireSize);
@@ -729,9 +754,30 @@ function createDepoLabel(data, tireSize, width, height) {
         tireSizesHtml = '<span class="label-value" style="margin-left: 0;">-</span>';
     }
     
+    // Seri numarası için dinamik font boyutu - uzun numaralar için sola doğru büyüsün
+    // Seri no boşsa veya sadece boşluk içeriyorsa gösterme
+    const seriNoStr = String(seriNo || '').trim();
+    let seriNoHtml = '';
+    if (seriNoStr && seriNoStr !== '') {
+        const seriNoLength = seriNoStr.length;
+        let seriNoFontSize = '8pt';
+        let seriNoRight = '0';
+        // 4-5 haneli seri numaraları için font boyutunu küçült ve sağdan boşluğu artır
+        if (seriNoLength >= 4) {
+            seriNoFontSize = '7pt';
+            seriNoRight = '1mm';
+        }
+        if (seriNoLength >= 5) {
+            seriNoFontSize = '6.5pt';
+            seriNoRight = '2mm';
+        }
+        seriNoHtml = `<div class="label-seri-no" style="font-size: ${seriNoFontSize}; right: ${seriNoRight};">${escapeHtml(seriNoStr)}</div>`;
+    }
+    
     return `
         <div class="depo-label" style="width: ${width}; height: ${height};">
             <div class="label-header">
+                ${seriNoHtml}
                 <img src="/static/images/Nusretler logo-Photoroom.png" alt="Logo" class="label-logo">
                 <div class="label-title-main">NUSRETLER LASTİK & SİGORTA</div>
                 <div class="label-title-sub">Depo Etiketi</div>
@@ -739,7 +785,7 @@ function createDepoLabel(data, tireSize, width, height) {
             <div class="label-content">
                 <div><span class="label-field">İsim:</span> <span class="label-value">${escapeHtml(data.customerName)}</span></div>
                 <div><span class="label-field">Telefon:</span> <span class="label-value">${escapeHtml(data.customerPhone)}</span></div>
-                <div><span class="label-field">Marka:</span> <span class="label-value">${escapeHtml(data.brand)}</span></div>
+                <div><span class="label-field">Marka / Mevsim:</span> <span class="label-value">${escapeHtml(data.brand || '-')} / ${escapeHtml(data.mevsim || '-')}</span></div>
                 <div style="margin-bottom: 2mm;">
                     <span class="label-field">Lastik Ebatı:</span>
                     ${tireSizesHtml}
@@ -754,7 +800,7 @@ function createDepoLabel(data, tireSize, width, height) {
     `;
 }
 
-function createMusteriLabel(data, width, height) {
+function createMusteriLabel(data, width, height, seriNo) {
     // Format all tire sizes in a grid (2 columns)
     let tireSizesHtml = '';
     console.log('createMusteriLabel - data.tireSizes:', data.tireSizes);
@@ -783,9 +829,30 @@ function createMusteriLabel(data, width, height) {
         tireSizesHtml = `<span class="label-value" style="margin-left: 0;">${escapeHtml(data.ebat || '-')}</span>`;
     }
     
+    // Seri numarası için dinamik font boyutu - uzun numaralar için sola doğru büyüsün
+    // Seri no boşsa veya sadece boşluk içeriyorsa gösterme
+    const seriNoStr = String(seriNo || '').trim();
+    let seriNoHtml = '';
+    if (seriNoStr && seriNoStr !== '') {
+        const seriNoLength = seriNoStr.length;
+        let seriNoFontSize = '8pt';
+        let seriNoRight = '0';
+        // 4-5 haneli seri numaraları için font boyutunu küçült ve sağdan boşluğu artır
+        if (seriNoLength >= 4) {
+            seriNoFontSize = '7pt';
+            seriNoRight = '1mm';
+        }
+        if (seriNoLength >= 5) {
+            seriNoFontSize = '6.5pt';
+            seriNoRight = '2mm';
+        }
+        seriNoHtml = `<div class="label-seri-no" style="font-size: ${seriNoFontSize}; right: ${seriNoRight};">${escapeHtml(seriNoStr)}</div>`;
+    }
+    
     return `
         <div class="musteri-label" style="width: ${width}; height: ${height};">
             <div class="label-header">
+                ${seriNoHtml}
                 <img src="/static/images/Nusretler logo-Photoroom.png" alt="Logo" class="label-logo">
                 <div class="label-title-main">NUSRETLER LASTİK & SİGORTA</div>
                 <div class="label-title-sub">Müşteri Etiketi</div>
@@ -793,7 +860,7 @@ function createMusteriLabel(data, width, height) {
             <div class="label-content">
                 <div><span class="label-field">İsim:</span> <span class="label-value">${escapeHtml(data.customerName)}</span></div>
                 <div><span class="label-field">Telefon:</span> <span class="label-value">${escapeHtml(data.customerPhone)}</span></div>
-                <div><span class="label-field">Marka:</span> <span class="label-value">${escapeHtml(data.brand)}</span></div>
+                <div><span class="label-field">Marka / Mevsim:</span> <span class="label-value">${escapeHtml(data.brand || '-')} / ${escapeHtml(data.mevsim || '-')}</span></div>
                 <div style="margin-bottom: 2mm;">
                     <span class="label-field">Lastik Ebatı:</span>
                     ${tireSizesHtml}
@@ -808,7 +875,7 @@ function createMusteriLabel(data, width, height) {
     `;
 }
 
-function createIsyeriLabel(data, width, height) {
+function createIsyeriLabel(data, width, height, seriNo) {
     // Format all tire sizes in a grid (2 columns)
     let tireSizesHtml = '';
     console.log('createIsyeriLabel - data.tireSizes:', data.tireSizes);
@@ -837,9 +904,30 @@ function createIsyeriLabel(data, width, height) {
         tireSizesHtml = `<span class="label-value" style="margin-left: 0;">${escapeHtml(data.ebat || '-')}</span>`;
     }
     
+    // Seri numarası için dinamik font boyutu - uzun numaralar için sola doğru büyüsün
+    // Seri no boşsa veya sadece boşluk içeriyorsa gösterme
+    const seriNoStr = String(seriNo || '').trim();
+    let seriNoHtml = '';
+    if (seriNoStr && seriNoStr !== '') {
+        const seriNoLength = seriNoStr.length;
+        let seriNoFontSize = '8pt';
+        let seriNoRight = '0';
+        // 4-5 haneli seri numaraları için font boyutunu küçült ve sağdan boşluğu artır
+        if (seriNoLength >= 4) {
+            seriNoFontSize = '7pt';
+            seriNoRight = '1mm';
+        }
+        if (seriNoLength >= 5) {
+            seriNoFontSize = '6.5pt';
+            seriNoRight = '2mm';
+        }
+        seriNoHtml = `<div class="label-seri-no" style="font-size: ${seriNoFontSize}; right: ${seriNoRight};">${escapeHtml(seriNoStr)}</div>`;
+    }
+    
     return `
         <div class="musteri-label" style="width: ${width}; height: ${height};">
             <div class="label-header">
+                ${seriNoHtml}
                 <img src="/static/images/Nusretler logo-Photoroom.png" alt="Logo" class="label-logo">
                 <div class="label-title-main">NUSRETLER LASTİK & SİGORTA</div>
                 <div class="label-title-sub">İşyeri Etiketi</div>
@@ -847,7 +935,7 @@ function createIsyeriLabel(data, width, height) {
             <div class="label-content">
                 <div><span class="label-field">İsim:</span> <span class="label-value">${escapeHtml(data.customerName)}</span></div>
                 <div><span class="label-field">Telefon:</span> <span class="label-value">${escapeHtml(data.customerPhone)}</span></div>
-                <div><span class="label-field">Marka:</span> <span class="label-value">${escapeHtml(data.brand)}</span></div>
+                <div><span class="label-field">Marka / Mevsim:</span> <span class="label-value">${escapeHtml(data.brand || '-')} / ${escapeHtml(data.mevsim || '-')}</span></div>
                 <div style="margin-bottom: 2mm;">
                     <span class="label-field">Lastik Ebatı:</span>
                     ${tireSizesHtml}
@@ -1013,6 +1101,9 @@ function generatePDFWithLogo(doc, data, logoData) {
         rowCount = Math.ceil(depotLabelCount / cols);
     }
     
+    // Müşterinin seri numarası - tüm etiketlerde aynı
+    const seriNo = data.seriNo || '';
+    
     for (let row = 0; row < rowCount; row++) {
         let maxRowHeight = 0;
         // For 5 labels, last row has only 1 label
@@ -1022,7 +1113,8 @@ function generatePDFWithLogo(doc, data, logoData) {
                 ? (210 - labelWidth) / 2  // Center single label in last row for 5 labels
                 : pageMargin + col * (labelWidth + margin);
             const tireSize = data.tireSizes && data.tireSizes[row * cols + col] ? data.tireSizes[row * cols + col] : (data.ebat || '');
-            drawLabelOnPDF(doc, data, tireSize, xPos, yPos, labelWidth, labelHeight, 'DEPO ETIKETI', logoData);
+            // Tüm depo etiketlerinde müşterinin seri numarası gösterilecek
+            drawLabelOnPDF(doc, data, tireSize, xPos, yPos, labelWidth, labelHeight, 'DEPO ETIKETI', logoData, seriNo);
             maxRowHeight = Math.max(maxRowHeight, labelHeight);
         }
         if (row < rowCount - 1) {
@@ -1063,16 +1155,16 @@ function generatePDFWithLogo(doc, data, logoData) {
     const isyeriXPos = depotSecondX; // İşyeri etiketi sağ depo etiketiyle aynı hizada
     
     // Müşteri Etiketi (sol) - depo etiketleriyle tam aynı X pozisyonunda
-    drawLabelOnPDF(doc, data, data.tireSizes[0] || data.ebat || '', customerXPos, customerYPos, labelWidth, labelHeight, 'MUSTERI ETIKETI', logoData);
+    drawLabelOnPDF(doc, data, data.tireSizes[0] || data.ebat || '', customerXPos, customerYPos, labelWidth, labelHeight, 'MUSTERI ETIKETI', logoData, seriNo);
     
     // İşyeri Etiketi (sağ, yan yana) - depo etiketleriyle tam aynı hizada
-    drawLabelOnPDF(doc, data, data.tireSizes[0] || data.ebat || '', isyeriXPos, customerYPos, labelWidth, labelHeight, 'ISYERI ETIKETI', logoData);
+    drawLabelOnPDF(doc, data, data.tireSizes[0] || data.ebat || '', isyeriXPos, customerYPos, labelWidth, labelHeight, 'ISYERI ETIKETI', logoData, seriNo);
     
     // Save PDF
     doc.save(`lastik_etiketleri_${data.customerPlate || 'etiket'}.pdf`);
 }
 
-function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, logoData) {
+function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, logoData, seriNo) {
     const isDepo = labelType.includes('DEPO');
     const bgColor = isDepo ? [249, 249, 249] : [255, 255, 255]; // #F9F9F9 for depo, white for musteri
     const borderColor = [242, 107, 29]; // #F26B1D orange
@@ -1088,6 +1180,27 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
     doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
     doc.setLineWidth(0.53);
     doc.roundedRect(x, y, width, height, 3, 3);
+    
+    // Seri numarası - sağ üst köşe (boşsa gösterme)
+    const seriNoStr = String(seriNo || '').trim();
+    if (seriNoStr && seriNoStr !== '') {
+        const seriNoLength = seriNoStr.length;
+        let seriNoFontSize = 6;
+        let seriNoX = x + width - 1; // Sağdan 1mm içeride
+        // 4-5 haneli seri numaraları için font boyutunu küçült ve sağdan boşluğu artır
+        if (seriNoLength >= 4) {
+            seriNoFontSize = 5.5;
+            seriNoX = x + width - 2; // Sağdan 2mm içeride
+        }
+        if (seriNoLength >= 5) {
+            seriNoFontSize = 5;
+            seriNoX = x + width - 3; // Sağdan 3mm içeride
+        }
+        doc.setFontSize(seriNoFontSize);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+        doc.text(seriNoStr, seriNoX, y + 2, { align: 'right' }); // Üstten 2mm aşağıda
+    }
     
     // jsPDF'in helvetica font'u Türkçe karakterleri desteklemiyor
     // Bu yüzden Türkçe karakterleri ASCII'ye çevirerek kullanıyoruz
@@ -1196,11 +1309,12 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
     doc.text(String(data.customerPhone || ''), valueX, currentY, { maxWidth: maxValueWidth });
     currentY += spacing;
     
-    // Marka (Türkçe karakterler ASCII'ye çevriliyor)
+    // Marka / Mevsim (Türkçe karakterler ASCII'ye çevriliyor)
     doc.setFont('helvetica', 'bold');
-    doc.text('Marka:', labelX, currentY);
+    doc.text('Marka / Mevsim:', labelX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text(truncate(convertTurkishToASCII(data.brand || ''), 22), valueX, currentY, { maxWidth: maxValueWidth });
+    const brandMevsim = `${data.brand || '-'} / ${data.mevsim || '-'}`;
+    doc.text(truncate(convertTurkishToASCII(brandMevsim), 22), valueX, currentY, { maxWidth: maxValueWidth });
     currentY += spacing;
     
     // Lastik Ebatı - Show all tire sizes in grid format
@@ -1332,12 +1446,16 @@ function printLabels() {
     const labelData = { ...data };
     labelData.tireSizes = tireSizesArray;
     
+    // Müşterinin seri numarası - tüm etiketlerde aynı
+    const seriNo = data.seriNo || '';
+    
     for (let row = 0; row < rowCount; row++) {
         const colsInThisRow = (depotLabelCount === 5 && row === 3) ? 1 : cols;
         for (let col = 0; col < colsInThisRow && (row * cols + col) < depotLabelCount; col++) {
             const index = row * cols + col;
             const tireSize = tireSizesArray[index] || data.ebat || '';
-            labelsHTML += createDepoLabel(labelData, tireSize, labelWidth, labelHeight);
+            // Tüm depo etiketlerinde müşterinin seri numarası gösterilecek
+            labelsHTML += createDepoLabel(labelData, tireSize, labelWidth, labelHeight, seriNo);
         }
     }
     
@@ -1348,8 +1466,8 @@ function printLabels() {
     labelsHTML += '<div class="mb-4">';
     labelsHTML += '<h3 class="text-lg font-semibold text-gray-800 mb-4 text-center no-print">Müşteri ve İşyeri Etiketleri</h3>';
     labelsHTML += '<div class="flex justify-center gap-8">';
-    labelsHTML += createMusteriLabel(data, labelWidth, labelHeight);
-    labelsHTML += createIsyeriLabel(data, labelWidth, labelHeight);
+    labelsHTML += createMusteriLabel(data, labelWidth, labelHeight, seriNo); // Müşteri etiketi için müşterinin seri no'su
+    labelsHTML += createIsyeriLabel(data, labelWidth, labelHeight, seriNo); // İşyeri etiketi için müşterinin seri no'su
     labelsHTML += '</div>';
     labelsHTML += '</div>';
     

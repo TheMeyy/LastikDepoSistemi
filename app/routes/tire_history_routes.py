@@ -110,6 +110,10 @@ def get_tire_history(
         eski_mevsim = item.eski_lastik_mevsim.value if item.eski_lastik_mevsim and hasattr(item.eski_lastik_mevsim, 'value') else (str(item.eski_lastik_mevsim) if item.eski_lastik_mevsim else None)
         yeni_mevsim = item.yeni_lastik_mevsim.value if item.yeni_lastik_mevsim and hasattr(item.yeni_lastik_mevsim, 'value') else (str(item.yeni_lastik_mevsim) if item.yeni_lastik_mevsim else None)
         
+        # Get serial numbers
+        eski_seri_no = item.eski_seri_no if hasattr(item, 'eski_seri_no') and item.eski_seri_no else None
+        yeni_seri_no = item.yeni_seri_no if hasattr(item, 'yeni_seri_no') and item.yeni_seri_no else None
+        
         result.append({
             "id": item.id,
             "musteri_adi": item.musteri_adi,
@@ -121,9 +125,11 @@ def get_tire_history(
             "eski_lastik_marka": item.eski_lastik_marka,
             "eski_lastik_mevsim": eski_mevsim,
             "eski_lastik_giris_tarihi": item.eski_lastik_giris_tarihi,
+            "eski_seri_no": eski_seri_no,
             "yeni_lastik_ebat": yeni_ebat_list,
             "yeni_lastik_marka": item.yeni_lastik_marka,
             "yeni_lastik_mevsim": yeni_mevsim,
+            "yeni_seri_no": yeni_seri_no,
             "raf_kodu": item.raf_kodu,
             "not": item.not_
         })

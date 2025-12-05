@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, func
 from typing import List, Optional
 from datetime import datetime
 from app.models.database import get_db
@@ -12,6 +12,14 @@ from app.utils.enums import TireDurumEnum, MevsimEnum, DisDurumuEnum, BRAND_LIST
 import json
 
 router = APIRouter(prefix="/api/tires", tags=["tires"])
+
+
+def get_next_seri_no(db: Session) -> int:
+    """Get the next available serial number"""
+    max_seri_no = db.query(func.max(Tire.seri_no)).scalar()
+    if max_seri_no is None:
+        return 1
+    return max_seri_no + 1
 
 
 def get_or_create_brand(db: Session, brand_name: str) -> Brand:
@@ -73,7 +81,11 @@ def create_tire(tire: TireCreate, db: Session = Depends(get_db)):
             durum_value = ModelTireDurumEnum.DEPODA  # Default
     
     try:
+        # Get next serial number
+        seri_no = get_next_seri_no(db)
+        
         db_tire = Tire(
+            seri_no=seri_no,
             musteri_id=tire.musteri_id,
             marka_id=brand.id,
             ebat=tire.ebat or '',
@@ -361,6 +373,8 @@ def update_tire(
                     joinedload(Tire.rack)
                 ).filter(Tire.id == tire_id).first()
                 if db_tire_with_rels:
+                    # For exit, old_tire and new_tire are the same (status changed)
+                    # eski_seri_no = current seri_no, yeni_seri_no = None (no new tire)
                     create_tire_history_entry(
                         db=db,
                         old_tire=db_tire_with_rels,
@@ -503,6 +517,7 @@ def format_tire_response(tire: Tire, db: Session) -> TireRead:
         
         return TireRead(
             id=tire.id,
+            seri_no=tire.seri_no if hasattr(tire, 'seri_no') and tire.seri_no else 0,
             musteri_id=tire.musteri_id,
             brand=brand_name,
             ebat=tire.ebat,
@@ -585,6 +600,35 @@ def create_tire_history_entry(
     eski_lastik_mevsim = old_tire.mevsim if old_tire.mevsim else None
     yeni_lastik_mevsim = new_tire.mevsim if new_tire.mevsim else None
     
+    # Get serial numbers - use getattr with default None
+    # Try multiple ways to get seri_no
+    eski_seri_no = None
+    yeni_seri_no = None
+    
+    # For old_tire: try getattr first, then direct attribute access
+    if hasattr(old_tire, 'seri_no'):
+        eski_seri_no = old_tire.seri_no
+    else:
+        # Try to get from __dict__ if it's a new object
+        eski_seri_no = getattr(old_tire, 'seri_no', None)
+    
+    # For new_tire: it might be a new object not yet committed
+    # Check if it has seri_no attribute (it should be set during creation)
+    if hasattr(new_tire, 'seri_no'):
+        yeni_seri_no = new_tire.seri_no
+    else:
+        # Try to get from __dict__ if it's a new object
+        yeni_seri_no = getattr(new_tire, 'seri_no', None)
+    
+    # Debug: Print serial numbers for troubleshooting
+    print(f"create_tire_history_entry - eski_seri_no: {eski_seri_no}, yeni_seri_no: {yeni_seri_no}")
+    print(f"create_tire_history_entry - old_tire.id: {getattr(old_tire, 'id', None)}, new_tire.id: {getattr(new_tire, 'id', None)}")
+    print(f"create_tire_history_entry - old_tire type: {type(old_tire)}, new_tire type: {type(new_tire)}")
+    if hasattr(old_tire, '__dict__'):
+        print(f"create_tire_history_entry - old_tire.__dict__ keys: {list(old_tire.__dict__.keys())}")
+    if hasattr(new_tire, '__dict__'):
+        print(f"create_tire_history_entry - new_tire.__dict__ keys: {list(new_tire.__dict__.keys())}")
+    
     history_entry = TireHistory(
         musteri_id=customer.id,
         musteri_adi=customer.ad_soyad,
@@ -595,9 +639,11 @@ def create_tire_history_entry(
         eski_lastik_marka=old_brand_name,
         eski_lastik_mevsim=eski_lastik_mevsim,
         eski_lastik_giris_tarihi=eski_giris_tarihi,
+        eski_seri_no=eski_seri_no,
         yeni_lastik_ebat=json.dumps(new_tire_sizes) if new_tire_sizes else None,
         yeni_lastik_marka=new_brand_name,
         yeni_lastik_mevsim=yeni_lastik_mevsim,
+        yeni_seri_no=yeni_seri_no,
         raf_kodu=rack_code,
         not_=not_
     )
@@ -649,12 +695,16 @@ def change_tire(
         old_tire.durum = ModelTireDurumEnum.DEGISTIRILDI
         db.add(old_tire)
         
-        # Create new tire
+        # Create new tire with next serial number
         entry_date = tire.giris_tarihi if tire.giris_tarihi else datetime.now()
         
         durum_value = ModelTireDurumEnum.DEPODA
         
+        # Get next serial number
+        seri_no = get_next_seri_no(db)
+        
         new_tire = Tire(
+            seri_no=seri_no,
             musteri_id=tire.musteri_id,
             marka_id=brand.id,
             ebat=tire.ebat or '',
@@ -683,7 +733,14 @@ def change_tire(
         # Rack stays full (doesn't change status)
         # No need to update rack status
         
-        # Create history entry
+        # Commit new_tire first so it gets an ID and seri_no is saved
+        db.commit()
+        db.refresh(new_tire)
+        
+        # Reload old_tire to ensure seri_no is loaded
+        db.refresh(old_tire)
+        
+        # Create history entry (after commit so seri_no values are available)
         create_tire_history_entry(
             db=db,
             old_tire=old_tire,

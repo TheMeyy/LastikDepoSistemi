@@ -104,7 +104,7 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seri No</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ad Soyad</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefon</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plaka</th>
@@ -115,7 +115,7 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% for customer in customers %}
                     <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ customer.id }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ customer.seri_no if customer.seri_no else '-' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ customer.ad_soyad }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ customer.telefon }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ customer.plaka }}</td>

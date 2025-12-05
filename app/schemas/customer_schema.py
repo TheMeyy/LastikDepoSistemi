@@ -27,3 +27,5 @@ class CustomerRead(BaseModel):
     class Config:
         from_attributes = True
 
+
+

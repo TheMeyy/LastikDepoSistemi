@@ -61,13 +61,12 @@ async def home(request: Request, db: Session = Depends(get_db)):
     query_params = {
         "customer_name": "",
         "plate": "",
-        "customer_phone": "",
         "ebat": "",
         "brand": "",
         "dis_durumu": "",
         "status": "Depoda",  # Default to "Depoda"
         "entry_date_from": "",
-        "entry_date_to": ""
+        "exit_date_from": ""
     }
     template = templates.get_template("index.html")
     return HTMLResponse(content=template.render(
@@ -85,13 +84,13 @@ async def lastik_ara(
     request: Request,
     customer_name: Optional[str] = Query(None),
     plate: Optional[str] = Query(None),
-    customer_phone: Optional[str] = Query(None),
     ebat: Optional[str] = Query(None),
     brand: Optional[str] = Query(None),
     dis_durumu: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    seri_no: Optional[str] = Query(None),
     entry_date_from: Optional[str] = Query(None),
-    entry_date_to: Optional[str] = Query(None),
+    exit_date_from: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """Main page - Search and filter tires"""
@@ -108,7 +107,13 @@ async def lastik_ara(
         # Default: only show DEPODA tires if status is not specified
         # If status is "Tümü", show all tires
         # If status is "Depoda" or "Çıkmış", apply that filter
-        status_clean = status.strip().lower() if status and status.strip() else ""
+        status_clean = ""
+        if status:
+            try:
+                status_clean = status.strip().lower() if status.strip() else ""
+            except AttributeError:
+                status_clean = str(status).lower() if status else ""
+        
         apply_status_filter = True
         status_filter_value = None
         
@@ -151,16 +156,6 @@ async def lastik_ara(
             customer = db.query(Customer).filter(Customer.plaka.ilike(f"%{plate}%")).first()
             if customer:
                 query = query.filter(Tire.musteri_id == customer.id)
-            else:
-                query = query.filter(Tire.id == -1)  # No results
-        
-        if customer_phone:
-            customers = db.query(Customer).filter(
-                Customer.telefon.ilike(f"%{customer_phone}%")
-            ).all()
-            if customers:
-                customer_ids = [c.id for c in customers]
-                query = query.filter(Tire.musteri_id.in_(customer_ids))
             else:
                 query = query.filter(Tire.id == -1)  # No results
         
@@ -207,18 +202,72 @@ async def lastik_ara(
         
         # Status filter is already applied above, no need to apply again here
         
-        if entry_date_from:
+        # Filter by entry date (giris_tarihi)
+        # If a single date is selected, filter for that specific day (start and end of day)
+        if entry_date_from and entry_date_from.strip():
             try:
-                date_from = datetime.fromisoformat(entry_date_from)
-                query = query.filter(Tire.giris_tarihi >= date_from)
-            except ValueError:
+                # Handle both ISO format and YYYY-MM-DD format
+                date_str = entry_date_from.strip()
+                if 'T' in date_str or '+' in date_str or 'Z' in date_str:
+                    date_from = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                else:
+                    # YYYY-MM-DD format
+                    date_from = datetime.strptime(date_str, '%Y-%m-%d')
+                
+                # Set to start of day (00:00:00)
+                date_from_start = date_from.replace(hour=0, minute=0, second=0, microsecond=0)
+                # Set to end of day (23:59:59.999999)
+                date_from_end = date_from.replace(hour=23, minute=59, second=59, microsecond=999999)
+                
+                # Filter for entries on this specific day
+                query = query.filter(
+                    Tire.giris_tarihi >= date_from_start,
+                    Tire.giris_tarihi <= date_from_end
+                )
+                print(f"DEBUG: Filtering by entry_date_from: {date_from_start} to {date_from_end}")
+            except (ValueError, AttributeError) as e:
+                print(f"DEBUG: Error parsing entry_date_from '{entry_date_from}': {e}")
                 pass
         
-        if entry_date_to:
+        # Filter by exit date (cikis_tarihi)
+        # If a single date is selected, filter for that specific day (start and end of day)
+        # Note: Only filter if cikis_tarihi is not NULL
+        if exit_date_from and exit_date_from.strip():
             try:
-                date_to = datetime.fromisoformat(entry_date_to)
-                query = query.filter(Tire.giris_tarihi <= date_to)
-            except ValueError:
+                # Handle both ISO format and YYYY-MM-DD format
+                date_str = exit_date_from.strip()
+                if 'T' in date_str or '+' in date_str or 'Z' in date_str:
+                    date_exit = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                else:
+                    # YYYY-MM-DD format
+                    date_exit = datetime.strptime(date_str, '%Y-%m-%d')
+                
+                # Set to start of day (00:00:00)
+                date_exit_start = date_exit.replace(hour=0, minute=0, second=0, microsecond=0)
+                # Set to end of day (23:59:59.999999)
+                date_exit_end = date_exit.replace(hour=23, minute=59, second=59, microsecond=999999)
+                
+                # Filter for exits on this specific day (only where cikis_tarihi is not NULL)
+                from sqlalchemy import and_
+                query = query.filter(
+                    and_(
+                        Tire.cikis_tarihi.isnot(None),  # Ensure cikis_tarihi is not NULL
+                        Tire.cikis_tarihi >= date_exit_start,
+                        Tire.cikis_tarihi <= date_exit_end
+                    )
+                )
+                print(f"DEBUG: Filtering by exit_date_from: {date_exit_start} to {date_exit_end}")
+            except (ValueError, AttributeError) as e:
+                print(f"DEBUG: Error parsing exit_date_from '{exit_date_from}': {e}")
+                pass
+        
+        # Filter by serial number
+        if seri_no and seri_no.strip():
+            try:
+                seri_no_int = int(seri_no.strip())
+                query = query.filter(Tire.seri_no == seri_no_int)
+            except (ValueError, TypeError):
+                # If seri_no is not a valid integer, skip this filter
                 pass
         
         # Production date filters (year as string)
@@ -262,15 +311,6 @@ async def lastik_ara(
                         tire_ids_query = tire_ids_query.filter(Tire.musteri_id == customer.id)
                     else:
                         tire_ids_query = tire_ids_query.filter(Tire.id == -1)
-                if customer_phone:
-                    customers = db.query(Customer).filter(
-                        Customer.telefon.ilike(f"%{customer_phone}%")
-                    ).all()
-                    if customers:
-                        customer_ids = [c.id for c in customers]
-                        tire_ids_query = tire_ids_query.filter(Tire.musteri_id.in_(customer_ids))
-                    else:
-                        tire_ids_query = tire_ids_query.filter(Tire.id == -1)
                 if ebat:
                     tire_ids_query = tire_ids_query.filter(Tire.ebat.ilike(f"%{ebat}%"))
                 if brand:
@@ -279,17 +319,39 @@ async def lastik_ara(
                         tire_ids_query = tire_ids_query.filter(Tire.marka_id == brand_obj.id)
                     else:
                         tire_ids_query = tire_ids_query.filter(Tire.id == -1)
-                if entry_date_from:
+                if entry_date_from and entry_date_from.strip():
                     try:
-                        date_from = datetime.fromisoformat(entry_date_from)
-                        tire_ids_query = tire_ids_query.filter(Tire.giris_tarihi >= date_from)
-                    except ValueError:
+                        date_str = entry_date_from.strip()
+                        if 'T' in date_str or '+' in date_str or 'Z' in date_str:
+                            date_from = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                        else:
+                            date_from = datetime.strptime(date_str, '%Y-%m-%d')
+                        date_from_start = date_from.replace(hour=0, minute=0, second=0, microsecond=0)
+                        date_from_end = date_from.replace(hour=23, minute=59, second=59, microsecond=999999)
+                        tire_ids_query = tire_ids_query.filter(
+                            Tire.giris_tarihi >= date_from_start,
+                            Tire.giris_tarihi <= date_from_end
+                        )
+                    except (ValueError, AttributeError):
                         pass
-                if entry_date_to:
+                if exit_date_from and exit_date_from.strip():
                     try:
-                        date_to = datetime.fromisoformat(entry_date_to)
-                        tire_ids_query = tire_ids_query.filter(Tire.giris_tarihi <= date_to)
-                    except ValueError:
+                        date_str = exit_date_from.strip()
+                        if 'T' in date_str or '+' in date_str or 'Z' in date_str:
+                            date_exit = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                        else:
+                            date_exit = datetime.strptime(date_str, '%Y-%m-%d')
+                        date_exit_start = date_exit.replace(hour=0, minute=0, second=0, microsecond=0)
+                        date_exit_end = date_exit.replace(hour=23, minute=59, second=59, microsecond=999999)
+                        from sqlalchemy import and_
+                        tire_ids_query = tire_ids_query.filter(
+                            and_(
+                                Tire.cikis_tarihi.isnot(None),  # Ensure cikis_tarihi is not NULL
+                                Tire.cikis_tarihi >= date_exit_start,
+                                Tire.cikis_tarihi <= date_exit_end
+                            )
+                        )
+                    except (ValueError, AttributeError):
                         pass
                 
                 tire_ids_query = tire_ids_query.order_by(Tire.giris_tarihi.desc())
@@ -421,6 +483,7 @@ async def lastik_ara(
             
             tire_dict = {
                 "id": tire.id,
+                "seri_no": tire.seri_no if hasattr(tire, 'seri_no') and tire.seri_no else None,
                 "customer_id": tire.musteri_id,  # Add customer_id for filtering
                 "customer_name": tire.customer.ad_soyad if tire.customer else "",
                 "customer_plate": tire.customer.plaka if tire.customer else "",
@@ -478,13 +541,13 @@ async def lastik_ara(
         query_params = {
             "customer_name": customer_name or "",
             "plate": plate or "",
-            "customer_phone": customer_phone or "",
             "ebat": ebat or "",
             "brand": brand or "",
             "dis_durumu": dis_durumu or "",
             "status": display_status,
+            "seri_no": seri_no.strip() if seri_no and seri_no.strip() else "",
             "entry_date_from": entry_date_from or "",
-            "entry_date_to": entry_date_to or ""
+            "exit_date_from": exit_date_from or ""
         }
     
         # Get brands and tire sizes from database
@@ -631,12 +694,12 @@ async def musteriler(
     # Apply filters
     if customer_name:
         # Türkçe karakter ve büyük/küçük harf duyarsız arama için normalize et
-        normalized_search = normalize_turkish_text(customer_name)
+        normalized_search = normalize_turkish_text(customer_name.strip() if customer_name else "")
         # Tüm müşterileri al ve normalize ederek karşılaştır
         all_customers = db.query(Customer).all()
         matching_customers = [
             c for c in all_customers 
-            if normalized_search in normalize_turkish_text(c.ad_soyad)
+            if normalized_search in normalize_turkish_text(c.ad_soyad or "")
         ]
         if matching_customers:
             customer_ids = [c.id for c in matching_customers]
@@ -665,7 +728,14 @@ async def musteriler(
         cikmis_count = 0
         
         try:
-            tires = db.query(Tire).filter(Tire.musteri_id == c.id).all()
+            tires = db.query(Tire).filter(Tire.musteri_id == c.id).order_by(Tire.giris_tarihi.desc()).all()
+            
+            # Get latest tire's serial number
+            latest_seri_no = None
+            if tires:
+                latest_tire = tires[0]  # Most recent tire (ordered by giris_tarihi desc)
+                if hasattr(latest_tire, 'seri_no') and latest_tire.seri_no:
+                    latest_seri_no = latest_tire.seri_no
             
             # Safely count tires by status
             for t in tires:
@@ -711,6 +781,7 @@ async def musteriler(
         
         customer_list.append({
             "id": c.id,
+            "seri_no": latest_seri_no,  # Latest tire's serial number
             "ad_soyad": c.ad_soyad,
             "telefon": c.telefon,
             "plaka": c.plaka,
@@ -847,12 +918,12 @@ async def lastik_etiketleri(
                 query = query.join(Customer)
                 if customer_name:
                     # Türkçe karakter ve büyük/küçük harf duyarsız arama için normalize et
-                    normalized_search = normalize_turkish_text(customer_name)
+                    normalized_search = normalize_turkish_text(customer_name.strip() if customer_name else "")
                     # Tüm müşterileri al ve normalize ederek karşılaştır
                     all_customers = db.query(Customer).all()
                     matching_customer_ids = [
                         c.id for c in all_customers 
-                        if normalized_search in normalize_turkish_text(c.ad_soyad)
+                        if normalized_search in normalize_turkish_text(c.ad_soyad or "")
                     ]
                     if matching_customer_ids:
                         query = query.filter(Tire.musteri_id.in_(matching_customer_ids))
@@ -959,9 +1030,57 @@ async def lastik_etiketleri(
                 print(f"Error converting dis_durumu: {e}")
                 dis_durumu_display = ""
             
+            # Get mevsim (season) value - convert enum to display string
+            mevsim_display = ""
+            try:
+                mevsim_raw = getattr(tire, 'mevsim', None)
+                if mevsim_raw:
+                    # Check if it's an enum instance (ModelMevsimEnum or any enum)
+                    if isinstance(mevsim_raw, ModelMevsimEnum):
+                        mevsim_display = mevsim_raw.value
+                    # Check if it has a 'value' attribute (enum objects)
+                    elif hasattr(mevsim_raw, 'value'):
+                        mevsim_display = mevsim_raw.value
+                    # If it's already a string, use it directly
+                    elif isinstance(mevsim_raw, str):
+                        mevsim_display = mevsim_raw
+                    else:
+                        # Handle enum string representation like "MevsimEnum.YAZ" or "MevsimEnum('Yaz')"
+                        mevsim_str = str(mevsim_raw)
+                        mevsim_str_upper = mevsim_str.upper()
+                        
+                        # Try to extract value from enum representation using regex
+                        import re
+                        # Match patterns like "MevsimEnum('Yaz')" or "MevsimEnum.YAZ" or "Yaz"
+                        match = re.search(r"['\"]([^'\"]+)['\"]", mevsim_str)
+                        if match:
+                            extracted_value = match.group(1)
+                            # Map to correct display value
+                            if extracted_value.upper() in ['YAZ', 'Yaz']:
+                                mevsim_display = "Yaz"
+                            elif extracted_value.upper() in ['KIS', 'KIŞ', 'Kış']:
+                                mevsim_display = "Kış"
+                            elif '4' in extracted_value.upper() or 'DORT' in extracted_value.upper():
+                                mevsim_display = "4 Mevsim"
+                            else:
+                                mevsim_display = extracted_value
+                        elif 'YAZ' in mevsim_str_upper:
+                            mevsim_display = "Yaz"
+                        elif 'KIS' in mevsim_str_upper or 'KIŞ' in mevsim_str_upper:
+                            mevsim_display = "Kış"
+                        elif 'DORT_MEVSIM' in mevsim_str_upper or '4 MEVSIM' in mevsim_str_upper or ('4' in mevsim_str_upper and 'MEVSIM' in mevsim_str_upper):
+                            mevsim_display = "4 Mevsim"
+                        else:
+                            # Last resort: use string representation but clean it up
+                            mevsim_display = mevsim_str
+            except Exception as e:
+                print(f"Error converting tire.mevsim: {e}, type: {type(getattr(tire, 'mevsim', None))}, value: {getattr(tire, 'mevsim', None)}")
+                mevsim_display = ""
+            
             import json
             tire_list.append({
                 "id": tire.id,
+                "seri_no": tire.seri_no if hasattr(tire, 'seri_no') and tire.seri_no else None,
                 "customer_name": tire.customer.ad_soyad if tire.customer else "",
                 "customer_phone": tire.customer.telefon if tire.customer else "",
                 "customer_plate": tire.customer.plaka if tire.customer else "",
@@ -969,6 +1088,7 @@ async def lastik_etiketleri(
                 "tire_sizes": tire_sizes,  # List of all tire sizes
                 "tire_sizes_json": json.dumps(tire_sizes) if tire_sizes else "[]",  # JSON string for template
                 "brand": tire.brand.marka_adi if tire.brand else "",
+                "mevsim": mevsim_display,  # Mevsim bilgisi
                 "rack_code": rack_code,
                 "dis_durumu": dis_durumu_display,
                 "giris_tarihi": tire.giris_tarihi,
@@ -1015,8 +1135,9 @@ async def musteri_gecmisi(
     customer_name: Optional[str] = Query(None),
     plate: Optional[str] = Query(None),
     phone: Optional[str] = Query(None),
-    date_from: Optional[str] = Query(None),
-    date_to: Optional[str] = Query(None),
+    seri_no: Optional[str] = Query(None),
+    eski_giris_tarihi: Optional[str] = Query(None),
+    islem_tarihi: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """Customer history page"""
@@ -1025,22 +1146,89 @@ async def musteri_gecmisi(
         query = db.query(TireHistory)
         
         if customer_name:
-            query = query.filter(TireHistory.musteri_adi.ilike(f"%{customer_name}%"))
+            # Türkçe karakter ve büyük/küçük harf duyarsız arama için normalize et
+            normalized_search = normalize_turkish_text(customer_name.strip())
+            # Tüm TireHistory kayıtlarını al ve normalize ederek karşılaştır
+            all_history_items = db.query(TireHistory).all()
+            matching_history_ids = [
+                h.id for h in all_history_items 
+                if normalized_search in normalize_turkish_text(h.musteri_adi or "")
+            ]
+            if matching_history_ids:
+                query = query.filter(TireHistory.id.in_(matching_history_ids))
+            else:
+                query = query.filter(TireHistory.id == -1)  # No results
         if plate:
             query = query.filter(TireHistory.plaka.ilike(f"%{plate}%"))
         if phone:
             query = query.filter(TireHistory.telefon.ilike(f"%{phone}%"))
-        if date_from:
+        
+        # Filter by serial number - search in both eski_seri_no and yeni_seri_no
+        if seri_no:
+            seri_no_clean = str(seri_no).strip()
+            if seri_no_clean and seri_no_clean != "":
+                try:
+                    seri_no_int = int(seri_no_clean)
+                    # Search in both eski_seri_no and yeni_seri_no columns
+                    from sqlalchemy import or_
+                    query = query.filter(
+                        or_(
+                            TireHistory.eski_seri_no == seri_no_int,
+                            TireHistory.yeni_seri_no == seri_no_int
+                        )
+                    )
+                    print(f"DEBUG: Filtering by seri_no={seri_no_int}")
+                except (ValueError, TypeError) as e:
+                    # If seri_no is not a valid integer, skip this filter
+                    print(f"Warning: Invalid seri_no value '{seri_no}': {e}")
+                    pass
+        
+        # Filter by dates - separate filters for eski_lastik_giris_tarihi and islem_tarihi
+        from sqlalchemy import and_
+        
+        # Filter by Eski Lastik Giriş Tarihi (eski_lastik_giris_tarihi)
+        if eski_giris_tarihi and eski_giris_tarihi.strip():
             try:
-                date_from_obj = datetime.fromisoformat(date_from)
-                query = query.filter(TireHistory.islem_tarihi >= date_from_obj)
-            except ValueError:
+                date_str = eski_giris_tarihi.strip()
+                if 'T' in date_str or '+' in date_str or 'Z' in date_str:
+                    date_obj = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                else:
+                    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                date_start = date_obj.replace(hour=0, minute=0, second=0, microsecond=0)
+                date_end = date_obj.replace(hour=23, minute=59, second=59, microsecond=999999)
+                # Filter for entries where eski_lastik_giris_tarihi matches this day
+                query = query.filter(
+                    and_(
+                        TireHistory.eski_lastik_giris_tarihi.isnot(None),
+                        TireHistory.eski_lastik_giris_tarihi >= date_start,
+                        TireHistory.eski_lastik_giris_tarihi <= date_end
+                    )
+                )
+                print(f"DEBUG: Filtering by eski_giris_tarihi: {date_start} to {date_end}")
+            except (ValueError, AttributeError) as e:
+                print(f"DEBUG: Error parsing eski_giris_tarihi '{eski_giris_tarihi}': {e}")
                 pass
-        if date_to:
+        
+        # Filter by Lastik Değişim/Çıkış Tarihi (islem_tarihi)
+        if islem_tarihi and islem_tarihi.strip():
             try:
-                date_to_obj = datetime.fromisoformat(date_to)
-                query = query.filter(TireHistory.islem_tarihi <= date_to_obj)
-            except ValueError:
+                date_str = islem_tarihi.strip()
+                if 'T' in date_str or '+' in date_str or 'Z' in date_str:
+                    date_obj = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                else:
+                    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                date_start = date_obj.replace(hour=0, minute=0, second=0, microsecond=0)
+                date_end = date_obj.replace(hour=23, minute=59, second=59, microsecond=999999)
+                # Filter for entries where islem_tarihi matches this day
+                query = query.filter(
+                    and_(
+                        TireHistory.islem_tarihi >= date_start,
+                        TireHistory.islem_tarihi <= date_end
+                    )
+                )
+                print(f"DEBUG: Filtering by islem_tarihi: {date_start} to {date_end}")
+            except (ValueError, AttributeError) as e:
+                print(f"DEBUG: Error parsing islem_tarihi '{islem_tarihi}': {e}")
                 pass
         
         # Try to query with mevsim columns, but handle case where they don't exist yet
@@ -1052,11 +1240,85 @@ async def musteri_gecmisi(
             # If mevsim columns don't exist, query without them using raw SQL
             print(f"Warning: Mevsim columns may not exist. Using fallback query. Error: {e}")
             from sqlalchemy import text
-            sql_query = text("""
+            
+            # Build WHERE clause for fallback query
+            where_conditions = []
+            params = {}
+            
+            if customer_name:
+                where_conditions.append("musteri_adi ILIKE :customer_name")
+                params["customer_name"] = f"%{customer_name}%"
+            if plate:
+                where_conditions.append("plaka ILIKE :plate")
+                params["plate"] = f"%{plate}%"
+            if phone:
+                where_conditions.append("telefon ILIKE :phone")
+                params["phone"] = f"%{phone}%"
+            if seri_no and seri_no.strip():
+                try:
+                    seri_no_int = int(seri_no.strip())
+                    where_conditions.append("(eski_seri_no = :seri_no OR yeni_seri_no = :seri_no)")
+                    params["seri_no"] = seri_no_int
+                except (ValueError, TypeError):
+                    pass
+            # Parse dates for fallback SQL query - use eski_giris_tarihi and islem_tarihi
+            eski_giris_date_start = None
+            eski_giris_date_end = None
+            islem_date_start = None
+            islem_date_end = None
+            
+            if eski_giris_tarihi and eski_giris_tarihi.strip():
+                try:
+                    date_str = eski_giris_tarihi.strip()
+                    if 'T' in date_str or '+' in date_str or 'Z' in date_str:
+                        date_obj = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                    else:
+                        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    eski_giris_date_start = date_obj.replace(hour=0, minute=0, second=0, microsecond=0)
+                    eski_giris_date_end = date_obj.replace(hour=23, minute=59, second=59, microsecond=999999)
+                except (ValueError, AttributeError):
+                    pass
+            
+            if islem_tarihi and islem_tarihi.strip():
+                try:
+                    date_str = islem_tarihi.strip()
+                    if 'T' in date_str or '+' in date_str or 'Z' in date_str:
+                        date_obj = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                    else:
+                        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    islem_date_start = date_obj.replace(hour=0, minute=0, second=0, microsecond=0)
+                    islem_date_end = date_obj.replace(hour=23, minute=59, second=59, microsecond=999999)
+                except (ValueError, AttributeError):
+                    pass
+            
+            # Apply date filters to SQL query
+            if eski_giris_date_start:
+                where_conditions.append("""
+                    (eski_lastik_giris_tarihi IS NOT NULL 
+                     AND eski_lastik_giris_tarihi >= :eski_giris_date_start 
+                     AND eski_lastik_giris_tarihi <= :eski_giris_date_end)
+                """)
+                params["eski_giris_date_start"] = eski_giris_date_start
+                params["eski_giris_date_end"] = eski_giris_date_end
+            
+            if islem_date_start:
+                where_conditions.append("""
+                    (islem_tarihi >= :islem_date_start 
+                     AND islem_tarihi <= :islem_date_end)
+                """)
+                params["islem_date_start"] = islem_date_start
+                params["islem_date_end"] = islem_date_end
+            
+            where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+            
+            sql_query = text(f"""
                 SELECT id, musteri_id, musteri_adi, plaka, telefon, islem_turu, islem_tarihi,
                        eski_lastik_ebat, eski_lastik_marka, eski_lastik_giris_tarihi,
-                       yeni_lastik_ebat, yeni_lastik_marka, raf_kodu, "not"
+                       eski_seri_no, yeni_seri_no,
+                       yeni_lastik_ebat, yeni_lastik_marka, raf_kodu, "not",
+                       eski_lastik_mevsim, yeni_lastik_mevsim
                 FROM tire_history
+                WHERE {where_clause}
                 ORDER BY islem_tarihi DESC
                 LIMIT 100
             """)
@@ -1074,13 +1336,15 @@ async def musteri_gecmisi(
                     self.islem_tarihi = row.islem_tarihi
                     self.eski_lastik_ebat = row.eski_lastik_ebat
                     self.eski_lastik_marka = row.eski_lastik_marka
-                    self.eski_lastik_giris_tarihi = row.eski_lastik_giris_tarihi
+                    self.eski_lastik_giris_tarihi = getattr(row, 'eski_lastik_giris_tarihi', None)
+                    self.eski_seri_no = getattr(row, 'eski_seri_no', None)
+                    self.yeni_seri_no = getattr(row, 'yeni_seri_no', None)
                     self.yeni_lastik_ebat = row.yeni_lastik_ebat
                     self.yeni_lastik_marka = row.yeni_lastik_marka
                     self.raf_kodu = row.raf_kodu
                     self.not_ = row.not_
-                    self.eski_lastik_mevsim = None
-                    self.yeni_lastik_mevsim = None
+                    self.eski_lastik_mevsim = getattr(row, 'eski_lastik_mevsim', None)
+                    self.yeni_lastik_mevsim = getattr(row, 'yeni_lastik_mevsim', None)
             history_items_raw = [TempHistoryItem(row) for row in history_items_raw]
         
         for item in history_items_raw:
@@ -1118,6 +1382,21 @@ async def musteri_gecmisi(
             except (AttributeError, KeyError):
                 pass
             
+            # Get serial numbers - handle case where columns don't exist yet
+            eski_seri_no = None
+            yeni_seri_no = None
+            try:
+                if hasattr(item, 'eski_seri_no'):
+                    eski_seri_no = item.eski_seri_no
+            except (AttributeError, KeyError):
+                pass
+            
+            try:
+                if hasattr(item, 'yeni_seri_no'):
+                    yeni_seri_no = item.yeni_seri_no
+            except (AttributeError, KeyError):
+                pass
+            
             history_items.append({
                 "id": item.id,
                 "musteri_adi": item.musteri_adi,
@@ -1128,10 +1407,12 @@ async def musteri_gecmisi(
                 "eski_lastik_ebat": eski_ebat_list,
                 "eski_lastik_marka": item.eski_lastik_marka,
                 "eski_lastik_mevsim": eski_mevsim,
-                "eski_lastik_giris_tarihi": item.eski_lastik_giris_tarihi,
+                "eski_lastik_giris_tarihi": getattr(item, 'eski_lastik_giris_tarihi', None),
+                "eski_seri_no": eski_seri_no,
                 "yeni_lastik_ebat": yeni_ebat_list,
                 "yeni_lastik_marka": item.yeni_lastik_marka,
                 "yeni_lastik_mevsim": yeni_mevsim,
+                "yeni_seri_no": yeni_seri_no,
                 "raf_kodu": item.raf_kodu,
                 "not": item.not_
             })
@@ -1140,8 +1421,9 @@ async def musteri_gecmisi(
             "customer_name": customer_name or "",
             "plate": plate or "",
             "phone": phone or "",
-            "date_from": date_from or "",
-            "date_to": date_to or ""
+            "seri_no": seri_no.strip() if seri_no and seri_no.strip() else "",
+            "eski_giris_tarihi": eski_giris_tarihi or "",
+            "islem_tarihi": islem_tarihi or ""
         }
         
         template = templates.get_template("musteri_gecmisi.html")

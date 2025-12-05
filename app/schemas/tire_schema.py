@@ -79,6 +79,7 @@ class TireCreate(BaseModel):
 class TireRead(BaseModel):
     """Schema for reading a tire"""
     id: int
+    seri_no: int  # Otomatik artan seri numarası
     musteri_id: int
     brand: str  # Will be populated from Brand relationship
     ebat: str

@@ -9,3 +9,5 @@ ADD COLUMN IF NOT EXISTS eski_lastik_mevsim VARCHAR(20);
 ALTER TABLE tire_history 
 ADD COLUMN IF NOT EXISTS yeni_lastik_mevsim VARCHAR(20);
 
+
+
