@@ -1,0 +1,17 @@
+# Yapay zekanın okumaması gereken yerler
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+node_modules/
+.next/
+dist/
+build/
+coverage/
+*.svg
+*.png
+*.jpg
+.git/# Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
+venv/
+.env
+__pycache__/
+migrations/

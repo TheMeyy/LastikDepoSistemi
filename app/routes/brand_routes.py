@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from app.models.database import get_db
-from app.models.models import Brand
+from app.models.models import Brand, Tire
 
 router = APIRouter(prefix="/api/brands", tags=["brands"])
 
@@ -35,4 +35,29 @@ def create_brand(brand: BrandCreate, db: Session = Depends(get_db)):
     db.refresh(new_brand)
     
     return {"id": new_brand.id, "marka_adi": new_brand.marka_adi}
+
+
+@router.delete("/{brand_name}", status_code=status.HTTP_200_OK)
+def delete_brand(brand_name: str, db: Session = Depends(get_db)):
+    """Delete a brand by its name if not used by any tire"""
+    sanitized_name = brand_name.strip()
+    brand = db.query(Brand).filter(Brand.marka_adi == sanitized_name).first()
+    if not brand:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Marka '{sanitized_name}' bulunamadı"
+        )
+
+    # Prevent deleting brands that are already in use (FK constraint safety)
+    is_used = db.query(Tire).filter(Tire.marka_id == brand.id).first()
+    if is_used:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bu marka mevcut lastiklerde kullanıldığı için silinemez"
+        )
+
+    db.delete(brand)
+    db.commit()
+
+    return {"detail": "Marka silindi", "marka_adi": sanitized_name}
 

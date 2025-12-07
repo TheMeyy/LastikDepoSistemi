@@ -37,4 +37,27 @@ def create_tire_size(tire_size: TireSizeCreate, db: Session = Depends(get_db)):
     return {"id": new_size.id, "ebat": new_size.ebat}
 
 
+@router.delete("/", status_code=status.HTTP_200_OK)
+def delete_tire_size(ebat: str, db: Session = Depends(get_db)):
+    """Delete a tire size by its value (query param to allow slashes like 225/50 R17)"""
+    sanitized_size = ebat.strip()
+    tire_size = db.query(TireSize).filter(TireSize.ebat == sanitized_size).first()
+    if not tire_size:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ebat '{sanitized_size}' bulunamadı"
+        )
+
+    db.delete(tire_size)
+    db.commit()
+
+    return {"detail": "Ebat silindi", "ebat": sanitized_size}
+
+
+
+
+
+
+
+
 

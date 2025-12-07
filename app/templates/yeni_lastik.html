@@ -106,6 +106,13 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                 </svg>
                             </button>
+                            <button type="button" onclick="confirmDeleteBrand()" 
+                                    class="px-3 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors shadow-sm flex-shrink-0"
+                                    title="Seçili markayı sil">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -173,6 +180,8 @@
 let tireCount = 0;
 const maxTires = 6;
 const tireSizes = {{ tire_sizes | tojson if tire_sizes else '[]' }};
+const manualTireSizes = new Set();  // Tracks sizes added manually in this session
+const manualBrands = new Set();      // Tracks brands added manually in this session
 
 function addTireField() {
     if (tireCount >= maxTires) {
@@ -193,13 +202,23 @@ function addTireField() {
                 <select id="tire${tireCount}_size" name="tire${tireCount}_size" 
                         class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white pr-10">
                     <option value="">Seçiniz...</option>
-                    ${tireSizes.map(size => `<option value="${size}">${size}</option>`).join('')}
+                    ${tireSizes.map(size => {
+                        const manualAttr = manualTireSizes.has(size) ? ' data-manual="true"' : '';
+                        return `<option value="${size}"${manualAttr}>${size}</option>`;
+                    }).join('')}
                 </select>
                 <button type="button" onclick="showAddTireSizeModal()" 
                         class="px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm flex-shrink-0"
                         title="Yeni ebat ekle">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                </button>
+                <button type="button" onclick="confirmDeleteTireSize('tire${tireCount}_size')" 
+                        class="px-3 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors shadow-sm flex-shrink-0"
+                        title="Seçili ebatı sil">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                     </svg>
                 </button>
             </div>
@@ -307,6 +326,195 @@ function showErrorModal(message) {
         </div>
     `;
     document.body.appendChild(errorModal);
+}
+
+function showSuccessModal(message) {
+    const successModal = document.createElement('div');
+    successModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    successModal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+            <div class="flex items-center space-x-4 mb-4">
+                <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900">Bilgi</h3>
+                    <p class="text-sm text-gray-600 mt-1">${message}</p>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button onclick="this.closest('.fixed').remove()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
+                    Tamam
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(successModal);
+    setTimeout(() => successModal.remove(), 2000);
+}
+
+function showConfirmModal(message) {
+    return new Promise((resolve) => {
+        const confirmModal = document.createElement('div');
+        confirmModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        confirmModal.innerHTML = `
+            <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+                <div class="flex items-center space-x-4 mb-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-900">Onay</h3>
+                        <p class="text-sm text-gray-600 mt-1">${message}</p>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
+                        Vazgeç
+                    </button>
+                    <button class="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
+                        Sil
+                    </button>
+                </div>
+            </div>
+        `;
+
+        const buttons = confirmModal.querySelectorAll('button');
+        const cancelBtn = buttons[0];
+        const confirmBtn = buttons[1];
+
+        cancelBtn.addEventListener('click', () => {
+            confirmModal.remove();
+            resolve(false);
+        });
+
+        confirmBtn.addEventListener('click', () => {
+            confirmModal.remove();
+            resolve(true);
+        });
+
+        document.body.appendChild(confirmModal);
+    });
+}
+
+async function confirmDeleteTireSize(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    if (!select.value) {
+        showErrorModal('Silmek için önce ebat seçin!');
+        return;
+    }
+
+    const selectedValue = select.value;
+    const selectedOption = select.options[select.selectedIndex];
+    const isManual = (selectedOption && selectedOption.dataset && selectedOption.dataset.manual === 'true') || manualTireSizes.has(selectedValue);
+
+    if (!isManual) {
+        showErrorModal('Sadece manuel eklenen ebatlar silinebilir.');
+        return;
+    }
+
+    const confirmed = await showConfirmModal(`'${selectedValue}' ebatını silmek istediğinize emin misiniz?`);
+    if (!confirmed) return;
+
+    try {
+        const response = await fetch(`/api/tire-sizes/?ebat=${encodeURIComponent(selectedValue)}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            let errorMessage = 'Ebat silinemedi';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || errorMessage;
+            } catch (_) {
+                // ignore json parse errors
+            }
+            showErrorModal(errorMessage);
+            return;
+        }
+
+        // Remove the option from all tire size dropdowns and clear selection where needed
+        document.querySelectorAll('select[id*="_size"]').forEach((dropdown) => {
+            const optionToRemove = Array.from(dropdown.options).find(opt => opt.value === selectedValue);
+            if (optionToRemove) {
+                optionToRemove.remove();
+            }
+            if (dropdown.value === selectedValue) {
+                dropdown.value = '';
+            }
+        });
+
+        // Remove from local caches
+        const sizeIndex = tireSizes.indexOf(selectedValue);
+        if (sizeIndex !== -1) {
+            tireSizes.splice(sizeIndex, 1);
+        }
+        manualTireSizes.delete(selectedValue);
+
+        showSuccessModal('Ebat silindi');
+    } catch (error) {
+        console.error('Error deleting tire size:', error);
+        showErrorModal('Bir hata oluştu: ' + error.message);
+    }
+}
+
+async function confirmDeleteBrand() {
+    const brandSelect = document.getElementById('brand');
+    if (!brandSelect) return;
+
+    const selectedValue = brandSelect.value;
+    if (!selectedValue) {
+        showErrorModal('Silmek için bir marka seçin!');
+        return;
+    }
+
+    const selectedOption = brandSelect.options[brandSelect.selectedIndex];
+    const isManual = (selectedOption && selectedOption.dataset && selectedOption.dataset.manual === 'true') || manualBrands.has(selectedValue);
+
+    if (!isManual) {
+        showErrorModal('Sadece manuel eklenen markalar silinebilir.');
+        return;
+    }
+
+    const confirmed = await showConfirmModal(`'${selectedValue}' markasını silmek istediğinize emin misiniz?`);
+    if (!confirmed) return;
+
+    try {
+        const response = await fetch(`/api/brands/${encodeURIComponent(selectedValue)}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            let errorMessage = 'Marka silinemedi';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || errorMessage;
+            } catch (_) {
+                // ignore json parse errors
+            }
+            showErrorModal(errorMessage);
+            return;
+        }
+
+        // Remove the option from dropdown
+        const optionToRemove = Array.from(brandSelect.options).find(opt => opt.value === selectedValue);
+        if (optionToRemove) {
+            optionToRemove.remove();
+        }
+        brandSelect.value = '';
+        manualBrands.delete(selectedValue);
+
+        showSuccessModal('Marka silindi');
+    } catch (error) {
+        console.error('Error deleting brand:', error);
+        showErrorModal('Bir hata oluştu: ' + error.message);
+    }
 }
 
 // Initialize: Add first tire field on page load
@@ -825,8 +1033,10 @@ async function saveNewBrand() {
             const newOption = document.createElement('option');
             newOption.value = newBrand.marka_adi;
             newOption.textContent = newBrand.marka_adi;
+            newOption.dataset.manual = "true";
             newOption.selected = true;
             brandSelect.appendChild(newOption);
+            manualBrands.add(newBrand.marka_adi);
             
             hideAddBrandModal();
             
@@ -900,14 +1110,22 @@ async function saveNewTireSize() {
             // Add to all tire size dropdowns
             const tireSizeSelects = document.querySelectorAll('select[id*="_size"]');
             tireSizeSelects.forEach(select => {
-                const newOption = document.createElement('option');
-                newOption.value = newSize.ebat;
-                newOption.textContent = newSize.ebat;
-                select.appendChild(newOption);
+                // Avoid duplicate options
+                const alreadyExists = Array.from(select.options).some(opt => opt.value === newSize.ebat);
+                if (!alreadyExists) {
+                    const newOption = document.createElement('option');
+                    newOption.value = newSize.ebat;
+                    newOption.textContent = newSize.ebat;
+                    newOption.dataset.manual = "true";
+                    select.appendChild(newOption);
+                }
             });
             
             // Update tireSizes array for dynamic tire fields
-            tireSizes.push(newSize.ebat);
+            if (!tireSizes.includes(newSize.ebat)) {
+                tireSizes.push(newSize.ebat);
+            }
+            manualTireSizes.add(newSize.ebat);
             
             hideAddTireSizeModal();
             

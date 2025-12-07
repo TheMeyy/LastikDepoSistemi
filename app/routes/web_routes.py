@@ -1444,4 +1444,3 @@ async def musteri_gecmisi(
             query_params={},
             current_path="/musteri-gecmisi"
         ))
-
