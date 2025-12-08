@@ -1186,20 +1186,20 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
     if (seriNoStr && seriNoStr !== '') {
         const seriNoLength = seriNoStr.length;
         let seriNoFontSize = 6;
-        let seriNoX = x + width - 1; // Sağdan 1mm içeride
+        let seriNoX = x + width - 4; // Sağdan 4mm içeride (PDF'de taşmaması için)
         // 4-5 haneli seri numaraları için font boyutunu küçült ve sağdan boşluğu artır
         if (seriNoLength >= 4) {
             seriNoFontSize = 5.5;
-            seriNoX = x + width - 2; // Sağdan 2mm içeride
+            seriNoX = x + width - 4.5;
         }
         if (seriNoLength >= 5) {
             seriNoFontSize = 5;
-            seriNoX = x + width - 3; // Sağdan 3mm içeride
+            seriNoX = x + width - 5;
         }
         doc.setFontSize(seriNoFontSize);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-        doc.text(seriNoStr, seriNoX, y + 2, { align: 'right' }); // Üstten 2mm aşağıda
+        doc.text(seriNoStr, seriNoX, y + 3, { align: 'right' }); // Üstten 3mm aşağıda
     }
     
     // jsPDF'in helvetica font'u Türkçe karakterleri desteklemiyor

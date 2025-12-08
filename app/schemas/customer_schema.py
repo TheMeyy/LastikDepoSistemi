@@ -32,3 +32,4 @@ class CustomerRead(BaseModel):
 
 
 
+
