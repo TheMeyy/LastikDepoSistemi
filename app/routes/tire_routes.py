@@ -52,7 +52,7 @@ def create_tire(tire: TireCreate, db: Session = Depends(get_db)):
             detail=f"Rack with ID {tire.raf_id} not found"
         )
     
-    # Get or create brand
+    # Get or create brand (used as fallback/default)
     brand = get_or_create_brand(db, tire.brand)
     
     # Set entry date if not provided
@@ -84,6 +84,15 @@ def create_tire(tire: TireCreate, db: Session = Depends(get_db)):
         # Get next serial number
         seri_no = get_next_seri_no(db)
         
+        # Prepare per-tire brand/mevsim values (fallback to top-level)
+        def per_tire_brand(i: int) -> str:
+            val = getattr(tire, f"tire{i}_brand", None)
+            return val or tire.brand
+
+        def per_tire_mevsim(i: int):
+            val = getattr(tire, f"tire{i}_mevsim", None)
+            return val or tire.mevsim
+
         db_tire = Tire(
             seri_no=seri_no,
             musteri_id=tire.musteri_id,
@@ -99,16 +108,28 @@ def create_tire(tire: TireCreate, db: Session = Depends(get_db)):
             # Multiple tire support
             tire1_size=tire.tire1_size,
             tire1_production_date=tire.tire1_production_date,
+            tire1_brand=per_tire_brand(1),
+            tire1_mevsim=per_tire_mevsim(1),
             tire2_size=tire.tire2_size,
             tire2_production_date=tire.tire2_production_date,
+            tire2_brand=per_tire_brand(2),
+            tire2_mevsim=per_tire_mevsim(2),
             tire3_size=tire.tire3_size,
             tire3_production_date=tire.tire3_production_date,
+            tire3_brand=per_tire_brand(3),
+            tire3_mevsim=per_tire_mevsim(3),
             tire4_size=tire.tire4_size,
             tire4_production_date=tire.tire4_production_date,
+            tire4_brand=per_tire_brand(4),
+            tire4_mevsim=per_tire_mevsim(4),
             tire5_size=tire.tire5_size,
             tire5_production_date=tire.tire5_production_date,
+            tire5_brand=per_tire_brand(5),
+            tire5_mevsim=per_tire_mevsim(5),
             tire6_size=tire.tire6_size,
-            tire6_production_date=tire.tire6_production_date
+            tire6_production_date=tire.tire6_production_date,
+            tire6_brand=per_tire_brand(6),
+            tire6_mevsim=per_tire_mevsim(6)
         )
         db.add(db_tire)
         
@@ -290,19 +311,39 @@ def update_tire(
             db_tire.giris_tarihi = tire.giris_tarihi
         db_tire.cikis_tarihi = tire.cikis_tarihi
         
+        def per_tire_brand(i: int) -> str:
+            val = getattr(tire, f"tire{i}_brand", None)
+            return val or tire.brand
+
+        def per_tire_mevsim(i: int):
+            val = getattr(tire, f"tire{i}_mevsim", None)
+            return val or tire.mevsim
+
         # Update multiple tire fields
         db_tire.tire1_size = tire.tire1_size
         db_tire.tire1_production_date = tire.tire1_production_date
+        db_tire.tire1_brand = per_tire_brand(1)
+        db_tire.tire1_mevsim = per_tire_mevsim(1)
         db_tire.tire2_size = tire.tire2_size
         db_tire.tire2_production_date = tire.tire2_production_date
+        db_tire.tire2_brand = per_tire_brand(2)
+        db_tire.tire2_mevsim = per_tire_mevsim(2)
         db_tire.tire3_size = tire.tire3_size
         db_tire.tire3_production_date = tire.tire3_production_date
+        db_tire.tire3_brand = per_tire_brand(3)
+        db_tire.tire3_mevsim = per_tire_mevsim(3)
         db_tire.tire4_size = tire.tire4_size
         db_tire.tire4_production_date = tire.tire4_production_date
+        db_tire.tire4_brand = per_tire_brand(4)
+        db_tire.tire4_mevsim = per_tire_mevsim(4)
         db_tire.tire5_size = tire.tire5_size
         db_tire.tire5_production_date = tire.tire5_production_date
+        db_tire.tire5_brand = per_tire_brand(5)
+        db_tire.tire5_mevsim = per_tire_mevsim(5)
         db_tire.tire6_size = tire.tire6_size
         db_tire.tire6_production_date = tire.tire6_production_date
+        db_tire.tire6_brand = per_tire_brand(6)
+        db_tire.tire6_mevsim = per_tire_mevsim(6)
         
         # Ensure durum is enum, not string
         # Convert from utils enum to model enum (they should match now, but be safe)
@@ -515,13 +556,49 @@ def format_tire_response(tire: Tire, db: Session) -> TireRead:
         else:
             durum_value = UtilsTireDurumEnum.DEPODA  # Default
         
+        # Collect per-tire data
+        tire_sizes = []
+        tire_production_dates = []
+        tire_brands = []
+        tire_mevsims = []
+        for i in range(1, 7):
+            size = getattr(tire, f"tire{i}_size", None)
+            prod_date = getattr(tire, f"tire{i}_production_date", None)
+            brand_val = getattr(tire, f"tire{i}_brand", None) or brand_name
+            mevsim_val = getattr(tire, f"tire{i}_mevsim", None) or tire.mevsim
+            if size:
+                tire_sizes.append(size)
+                tire_production_dates.append(prod_date if prod_date else None)
+                tire_brands.append(brand_val)
+                # Convert mevsim to display string
+                if isinstance(mevsim_val, ModelMevsimEnum):
+                    tire_mevsims.append(mevsim_val.value)
+                elif hasattr(mevsim_val, 'value'):
+                    tire_mevsims.append(mevsim_val.value)
+                else:
+                    tire_mevsims.append(mevsim_val)
+        # Legacy fallback
+        if not tire_sizes and tire.ebat:
+            tire_sizes.append(tire.ebat)
+            tire_production_dates.append(None)
+            tire_brands.append(brand_name)
+            tire_mevsims.append(tire.mevsim.value if isinstance(tire.mevsim, ModelMevsimEnum) else tire.mevsim)
+
+        # Default top-level brand/mevsim to first per-tire values if available
+        top_brand = brand_name
+        top_mevsim = tire.mevsim
+        if tire_brands:
+            top_brand = tire_brands[0] or brand_name
+        if tire_mevsims:
+            top_mevsim = tire_mevsims[0] or tire.mevsim
+
         return TireRead(
             id=tire.id,
             seri_no=tire.seri_no if hasattr(tire, 'seri_no') and tire.seri_no else 0,
             musteri_id=tire.musteri_id,
-            brand=brand_name,
+            brand=top_brand,
             ebat=tire.ebat,
-            mevsim=tire.mevsim,
+            mevsim=top_mevsim,
             dis_durumu=tire.dis_durumu,
             not_=tire.not_,
             raf_id=tire.raf_id,
@@ -543,7 +620,9 @@ def format_tire_response(tire: Tire, db: Session) -> TireRead:
             tire5_size=tire.tire5_size,
             tire5_production_date=tire.tire5_production_date,
             tire6_size=tire.tire6_size,
-            tire6_production_date=tire.tire6_production_date
+            tire6_production_date=tire.tire6_production_date,
+            tire_brands=tire_brands if tire_brands else None,
+            tire_mevsims=tire_mevsims if tire_mevsims else None
         )
     except Exception as e:
         import traceback
@@ -562,28 +641,44 @@ def create_tire_history_entry(
     not_: Optional[str] = None
 ):
     """Create a tire history entry"""
-    # Collect old tire sizes
+    # Collect old tire sizes, brands, mevsims
     old_tire_sizes = []
+    old_tire_brands = []
+    old_tire_mevsims = []
     for i in range(1, 7):
         size = getattr(old_tire, f'tire{i}_size', None)
         prod_date = getattr(old_tire, f'tire{i}_production_date', None)
+        brand_val = getattr(old_tire, f'tire{i}_brand', None) or (old_tire.brand.marka_adi if old_tire.brand else None)
+        mevsim_val = getattr(old_tire, f'tire{i}_mevsim', None) or getattr(old_tire, 'mevsim', None)
         if size:
             old_tire_sizes.append({"size": size, "year": prod_date})
+            old_tire_brands.append(brand_val)
+            old_tire_mevsims.append(mevsim_val.value if hasattr(mevsim_val, 'value') else mevsim_val)
     
-    # Collect new tire sizes
+    # Collect new tire sizes, brands, mevsims
     new_tire_sizes = []
+    new_tire_brands = []
+    new_tire_mevsims = []
     for i in range(1, 7):
         size = getattr(new_tire, f'tire{i}_size', None)
         prod_date = getattr(new_tire, f'tire{i}_production_date', None)
+        brand_val = getattr(new_tire, f'tire{i}_brand', None)
+        if not brand_val and hasattr(new_tire, 'brand') and new_tire.brand:
+            brand_val = new_tire.brand.marka_adi
+        mevsim_val = getattr(new_tire, f'tire{i}_mevsim', None) or getattr(new_tire, 'mevsim', None)
         if size:
             new_tire_sizes.append({"size": size, "year": prod_date})
+            new_tire_brands.append(brand_val)
+            new_tire_mevsims.append(mevsim_val.value if hasattr(mevsim_val, 'value') else mevsim_val)
     
     # Get brand names
     old_brand_name = old_tire.brand.marka_adi if old_tire.brand else ""
     
     # For new tire, get brand by marka_id since relationship might not be loaded yet
     new_brand_name = ""
-    if hasattr(new_tire, 'marka_id') and new_tire.marka_id:
+    if new_tire_brands:
+        new_brand_name = new_tire_brands[0] or ""
+    elif hasattr(new_tire, 'marka_id') and new_tire.marka_id:
         new_brand = db.query(Brand).filter(Brand.id == new_tire.marka_id).first()
         if new_brand:
             new_brand_name = new_brand.marka_adi
@@ -598,7 +693,7 @@ def create_tire_history_entry(
     
     # Get mevsim (season) values
     eski_lastik_mevsim = old_tire.mevsim if old_tire.mevsim else None
-    yeni_lastik_mevsim = new_tire.mevsim if new_tire.mevsim else None
+    yeni_lastik_mevsim = new_tire_mevsims[0] if new_tire_mevsims else (new_tire.mevsim if new_tire.mevsim else None)
     
     # Get serial numbers - use getattr with default None
     # Try multiple ways to get seri_no
@@ -642,7 +737,9 @@ def create_tire_history_entry(
         eski_seri_no=eski_seri_no,
         yeni_lastik_ebat=json.dumps(new_tire_sizes) if new_tire_sizes else None,
         yeni_lastik_marka=new_brand_name,
+        yeni_lastik_marka_json=json.dumps(new_tire_brands) if new_tire_brands else None,
         yeni_lastik_mevsim=yeni_lastik_mevsim,
+        yeni_lastik_mevsim_json=json.dumps(new_tire_mevsims) if new_tire_mevsims else None,
         yeni_seri_no=yeni_seri_no,
         raf_kodu=rack_code,
         not_=not_

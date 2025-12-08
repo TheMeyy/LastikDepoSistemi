@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from app.utils.enums import MevsimEnum, DisDurumuEnum, TireDurumEnum, BRAND_LIST
 
@@ -20,16 +20,28 @@ class TireCreate(BaseModel):
     # Multiple tire support (up to 6 tires)
     tire1_size: Optional[str] = Field(None, description="Tire 1 size")
     tire1_production_date: Optional[str] = Field(None, description="Tire 1 production year (e.g., '2024')")
+    tire1_brand: Optional[str] = Field(None, description="Tire 1 brand")
+    tire1_mevsim: Optional[MevsimEnum] = Field(None, description="Tire 1 season")
     tire2_size: Optional[str] = Field(None, description="Tire 2 size")
     tire2_production_date: Optional[str] = Field(None, description="Tire 2 production year (e.g., '2024')")
+    tire2_brand: Optional[str] = Field(None, description="Tire 2 brand")
+    tire2_mevsim: Optional[MevsimEnum] = Field(None, description="Tire 2 season")
     tire3_size: Optional[str] = Field(None, description="Tire 3 size")
     tire3_production_date: Optional[str] = Field(None, description="Tire 3 production year (e.g., '2024')")
+    tire3_brand: Optional[str] = Field(None, description="Tire 3 brand")
+    tire3_mevsim: Optional[MevsimEnum] = Field(None, description="Tire 3 season")
     tire4_size: Optional[str] = Field(None, description="Tire 4 size")
     tire4_production_date: Optional[str] = Field(None, description="Tire 4 production year (e.g., '2024')")
+    tire4_brand: Optional[str] = Field(None, description="Tire 4 brand")
+    tire4_mevsim: Optional[MevsimEnum] = Field(None, description="Tire 4 season")
     tire5_size: Optional[str] = Field(None, description="Tire 5 size")
     tire5_production_date: Optional[str] = Field(None, description="Tire 5 production year (e.g., '2024')")
+    tire5_brand: Optional[str] = Field(None, description="Tire 5 brand")
+    tire5_mevsim: Optional[MevsimEnum] = Field(None, description="Tire 5 season")
     tire6_size: Optional[str] = Field(None, description="Tire 6 size")
     tire6_production_date: Optional[str] = Field(None, description="Tire 6 production year (e.g., '2024')")
+    tire6_brand: Optional[str] = Field(None, description="Tire 6 brand")
+    tire6_mevsim: Optional[MevsimEnum] = Field(None, description="Tire 6 season")
     
     @field_validator("durum", mode="before")
     @classmethod
@@ -97,16 +109,30 @@ class TireRead(BaseModel):
     # Multiple tire support (up to 6 tires)
     tire1_size: Optional[str] = None
     tire1_production_date: Optional[str] = None  # Year as string (e.g., "2024")
+    tire1_brand: Optional[str] = None
+    tire1_mevsim: Optional[MevsimEnum] = None
     tire2_size: Optional[str] = None
     tire2_production_date: Optional[str] = None  # Year as string (e.g., "2024")
+    tire2_brand: Optional[str] = None
+    tire2_mevsim: Optional[MevsimEnum] = None
     tire3_size: Optional[str] = None
     tire3_production_date: Optional[str] = None  # Year as string (e.g., "2024")
+    tire3_brand: Optional[str] = None
+    tire3_mevsim: Optional[MevsimEnum] = None
     tire4_size: Optional[str] = None
     tire4_production_date: Optional[str] = None  # Year as string (e.g., "2024")
+    tire4_brand: Optional[str] = None
+    tire4_mevsim: Optional[MevsimEnum] = None
     tire5_size: Optional[str] = None
     tire5_production_date: Optional[str] = None  # Year as string (e.g., "2024")
+    tire5_brand: Optional[str] = None
+    tire5_mevsim: Optional[MevsimEnum] = None
     tire6_size: Optional[str] = None
     tire6_production_date: Optional[str] = None  # Year as string (e.g., "2024")
+    tire_brands: Optional[List[Optional[str]]] = None
+    tire_mevsims: Optional[List[Optional[MevsimEnum]]] = None
+    tire6_brand: Optional[str] = None
+    tire6_mevsim: Optional[MevsimEnum] = None
 
     class Config:
         from_attributes = True

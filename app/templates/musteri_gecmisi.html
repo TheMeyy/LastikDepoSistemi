@@ -146,14 +146,34 @@
                                     <span class="text-gray-400">-</span>
                                 {% endif %}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600">{{ item.yeni_lastik_marka or '-' }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {% if item.yeni_lastik_mevsim %}
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        {{ item.yeni_lastik_mevsim }}
-                                    </span>
+                            <td class="px-6 py-4 text-sm">
+                                {% if item.yeni_lastik_marka_list and item.yeni_lastik_marka_list|length > 0 %}
+                                    <div class="flex flex-col gap-1">
+                                        {% for marka in item.yeni_lastik_marka_list %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded border border-blue-100 bg-blue-50 text-blue-700 text-xs font-semibold">{{ marka or '-' }}</span>
+                                        {% endfor %}
+                                    </div>
                                 {% else %}
-                                    <span class="text-gray-400">-</span>
+                                    <span class="whitespace-nowrap text-sm font-semibold text-blue-600">{{ item.yeni_lastik_marka or '-' }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">
+                                {% if item.yeni_lastik_mevsim_list and item.yeni_lastik_mevsim_list|length > 0 %}
+                                    <div class="flex flex-col gap-1">
+                                        {% for mev in item.yeni_lastik_mevsim_list %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                {{ mev or '-' }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {% if item.yeni_lastik_mevsim %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            {{ item.yeni_lastik_mevsim }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-gray-400">-</span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 font-mono">
@@ -179,8 +199,10 @@
                                     <span class="text-gray-400">-</span>
                                 {% endif %}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600">{{ item.eski_lastik_marka or '-' }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <td class="px-6 py-4 text-sm">
+                                <span class="whitespace-nowrap text-sm font-semibold text-blue-600">{{ item.eski_lastik_marka or '-' }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">
                                 {% if item.eski_lastik_mevsim %}
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                         {{ item.eski_lastik_mevsim }}

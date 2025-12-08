@@ -419,20 +419,34 @@ async def lastik_ara(
             # Collect all tire sizes and production dates (only those that exist)
             tire_sizes_list = []
             tire_production_dates_list = []
+            tire_brands_list = []
+            tire_mevsim_list = []
+            mevsim_display = ""
             
             # Check tire1 through tire6
             for i in range(1, 7):
                 size_field = getattr(tire, f'tire{i}_size', None)
                 prod_date_field = getattr(tire, f'tire{i}_production_date', None)
+                brand_field = getattr(tire, f'tire{i}_brand', None)
+                mevsim_field = getattr(tire, f'tire{i}_mevsim', None) or getattr(tire, 'mevsim', None)
                 
                 if size_field:
                     tire_sizes_list.append(size_field)
                     tire_production_dates_list.append(prod_date_field if prod_date_field else None)
+                    tire_brands_list.append(brand_field if brand_field else (tire.brand.marka_adi if tire.brand else ""))
+                    if isinstance(mevsim_field, ModelMevsimEnum):
+                        tire_mevsim_list.append(mevsim_field.value)
+                    elif hasattr(mevsim_field, 'value'):
+                        tire_mevsim_list.append(mevsim_field.value)
+                    else:
+                        tire_mevsim_list.append(mevsim_field)
             
             # If no tire sizes found in tire1-tire6, use legacy ebat field
             if not tire_sizes_list and tire.ebat:
                 tire_sizes_list.append(tire.ebat)
                 tire_production_dates_list.append(None)
+                tire_brands_list.append(tire.brand.marka_adi if tire.brand else "")
+                tire_mevsim_list.append(mevsim_display)
             
             # Get mevsim (season) value - convert enum to display string
             mevsim_display = ""
@@ -490,8 +504,10 @@ async def lastik_ara(
                 "ebat": tire.ebat,  # Keep for backward compatibility
                 "tire_sizes": tire_sizes_list,  # List of all tire sizes
                 "tire_production_dates": tire_production_dates_list,  # List of production dates
-                "brand": tire.brand.marka_adi if tire.brand else "",
-                "mevsim": mevsim_display,
+                "tire_brands": tire_brands_list,
+                "tire_mevsims": tire_mevsim_list,
+                "brand": tire.brand.marka_adi if tire.brand else (tire_brands_list[0] if tire_brands_list else ""),
+                "mevsim": mevsim_display if mevsim_display else (tire_mevsim_list[0] if tire_mevsim_list else ""),
                 "rack_code": tire.rack.kod if tire.rack else "",
                 "giris_tarihi": tire.giris_tarihi,
                 "cikis_tarihi": tire.cikis_tarihi,
@@ -627,17 +643,29 @@ async def yeni_lastik(
                 # Collect tire sizes
                 tire_sizes_list = []
                 tire_production_dates_list = []
+                tire_brands_list = []
+                tire_mevsim_list = []
+                mevsim_display = ""
                 for i in range(1, 7):
                     size = getattr(tire, f'tire{i}_size', None)
                     prod_date = getattr(tire, f'tire{i}_production_date', None)
+                    brand_val = getattr(tire, f'tire{i}_brand', None) or (tire.brand.marka_adi if tire.brand else "")
+                    mevsim_val = getattr(tire, f'tire{i}_mevsim', None) or getattr(tire, 'mevsim', None)
                     if size:
                         tire_sizes_list.append(size)
                         tire_production_dates_list.append(prod_date)
+                        tire_brands_list.append(brand_val)
+                        if hasattr(mevsim_val, 'value'):
+                            tire_mevsim_list.append(mevsim_val.value)
+                        else:
+                            tire_mevsim_list.append(mevsim_val)
                 
                 # If no tire sizes in tire1-tire6, use legacy ebat
                 if not tire_sizes_list and tire.ebat:
                     tire_sizes_list.append(tire.ebat)
                     tire_production_dates_list.append(None)
+                    tire_brands_list.append(tire.brand.marka_adi if tire.brand else "")
+                    tire_mevsim_list.append(tire.mevsim.value if hasattr(tire.mevsim, 'value') else str(tire.mevsim))
                 
                 # Parse not field
                 not_value = tire.not_ if tire.not_ else ""
@@ -662,7 +690,9 @@ async def yeni_lastik(
                     "brand_note": brand_note,
                     "general_note": general_note,
                     "tire_sizes": tire_sizes_list,
-                    "tire_production_dates": tire_production_dates_list
+                    "tire_production_dates": tire_production_dates_list,
+                    "tire_brands": tire_brands_list,
+                    "tire_mevsims": tire_mevsim_list
                 }
         except Exception as e:
             print(f"Error loading tire data: {e}")
@@ -1315,8 +1345,8 @@ async def musteri_gecmisi(
                 SELECT id, musteri_id, musteri_adi, plaka, telefon, islem_turu, islem_tarihi,
                        eski_lastik_ebat, eski_lastik_marka, eski_lastik_giris_tarihi,
                        eski_seri_no, yeni_seri_no,
-                       yeni_lastik_ebat, yeni_lastik_marka, raf_kodu, "not",
-                       eski_lastik_mevsim, yeni_lastik_mevsim
+                       yeni_lastik_ebat, yeni_lastik_marka, yeni_lastik_marka_json, raf_kodu, "not",
+                       eski_lastik_mevsim, yeni_lastik_mevsim, yeni_lastik_mevsim_json
                 FROM tire_history
                 WHERE {where_clause}
                 ORDER BY islem_tarihi DESC
@@ -1341,15 +1371,19 @@ async def musteri_gecmisi(
                     self.yeni_seri_no = getattr(row, 'yeni_seri_no', None)
                     self.yeni_lastik_ebat = row.yeni_lastik_ebat
                     self.yeni_lastik_marka = row.yeni_lastik_marka
+                    self.yeni_lastik_marka_json = getattr(row, 'yeni_lastik_marka_json', None)
                     self.raf_kodu = row.raf_kodu
                     self.not_ = row.not_
                     self.eski_lastik_mevsim = getattr(row, 'eski_lastik_mevsim', None)
                     self.yeni_lastik_mevsim = getattr(row, 'yeni_lastik_mevsim', None)
+                    self.yeni_lastik_mevsim_json = getattr(row, 'yeni_lastik_mevsim_json', None)
             history_items_raw = [TempHistoryItem(row) for row in history_items_raw]
         
         for item in history_items_raw:
             eski_ebat_list = []
             yeni_ebat_list = []
+            yeni_marka_list = []
+            yeni_mevsim_list = []
             if item.eski_lastik_ebat:
                 try:
                     eski_ebat_list = json.loads(item.eski_lastik_ebat)
@@ -1360,6 +1394,17 @@ async def musteri_gecmisi(
                     yeni_ebat_list = json.loads(item.yeni_lastik_ebat)
                 except:
                     pass
+            # Parse new brand/mevsim json lists if present
+            if hasattr(item, 'yeni_lastik_marka_json') and getattr(item, 'yeni_lastik_marka_json', None):
+                try:
+                    yeni_marka_list = json.loads(item.yeni_lastik_marka_json) or []
+                except:
+                    yeni_marka_list = []
+            if hasattr(item, 'yeni_lastik_mevsim_json') and getattr(item, 'yeni_lastik_mevsim_json', None):
+                try:
+                    yeni_mevsim_list = json.loads(item.yeni_lastik_mevsim_json) or []
+                except:
+                    yeni_mevsim_list = []
             
             # Get mevsim values - handle case where columns don't exist yet
             eski_mevsim = None
@@ -1411,7 +1456,9 @@ async def musteri_gecmisi(
                 "eski_seri_no": eski_seri_no,
                 "yeni_lastik_ebat": yeni_ebat_list,
                 "yeni_lastik_marka": item.yeni_lastik_marka,
+                "yeni_lastik_marka_list": yeni_marka_list,
                 "yeni_lastik_mevsim": yeni_mevsim,
+                "yeni_lastik_mevsim_list": yeni_mevsim_list,
                 "yeni_seri_no": yeni_seri_no,
                 "raf_kodu": item.raf_kodu,
                 "not": item.not_

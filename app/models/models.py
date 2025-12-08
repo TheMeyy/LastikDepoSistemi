@@ -96,16 +96,28 @@ class Tire(Base):
     # Multiple tire support (up to 6 tires)
     tire1_size = Column(String, nullable=True)
     tire1_production_date = Column(String, nullable=True)  # Year as string (e.g., "2024")
+    tire1_brand = Column(String, nullable=True)
+    tire1_mevsim = Column(Enum(MevsimEnum), nullable=True)
     tire2_size = Column(String, nullable=True)
     tire2_production_date = Column(String, nullable=True)  # Year as string (e.g., "2024")
+    tire2_brand = Column(String, nullable=True)
+    tire2_mevsim = Column(Enum(MevsimEnum), nullable=True)
     tire3_size = Column(String, nullable=True)
     tire3_production_date = Column(String, nullable=True)  # Year as string (e.g., "2024")
+    tire3_brand = Column(String, nullable=True)
+    tire3_mevsim = Column(Enum(MevsimEnum), nullable=True)
     tire4_size = Column(String, nullable=True)
     tire4_production_date = Column(String, nullable=True)  # Year as string (e.g., "2024")
+    tire4_brand = Column(String, nullable=True)
+    tire4_mevsim = Column(Enum(MevsimEnum), nullable=True)
     tire5_size = Column(String, nullable=True)
     tire5_production_date = Column(String, nullable=True)  # Year as string (e.g., "2024")
+    tire5_brand = Column(String, nullable=True)
+    tire5_mevsim = Column(Enum(MevsimEnum), nullable=True)
     tire6_size = Column(String, nullable=True)
     tire6_production_date = Column(String, nullable=True)  # Year as string (e.g., "2024")
+    tire6_brand = Column(String, nullable=True)
+    tire6_mevsim = Column(Enum(MevsimEnum), nullable=True)
 
     # Relationships
     customer = relationship("Customer", back_populates="tires")
@@ -133,8 +145,10 @@ class TireHistory(Base):
     
     # Yeni lastik bilgileri
     yeni_lastik_ebat = Column(Text, nullable=True)  # JSON string
-    yeni_lastik_marka = Column(String, nullable=True)
-    yeni_lastik_mevsim = Column(Enum(MevsimEnum, native_enum=False, length=20), nullable=True)  # Yeni lastiğin mevsimi
+    yeni_lastik_marka = Column(String, nullable=True)  # Legacy single brand
+    yeni_lastik_marka_json = Column(Text, nullable=True)  # JSON list of brands
+    yeni_lastik_mevsim = Column(Enum(MevsimEnum, native_enum=False, length=20), nullable=True)  # Legacy single mevsim
+    yeni_lastik_mevsim_json = Column(Text, nullable=True)  # JSON list of mevsim values
     yeni_seri_no = Column(Integer, nullable=True)  # Yeni lastiğin seri numarası
     
     raf_kodu = Column(String, nullable=True)

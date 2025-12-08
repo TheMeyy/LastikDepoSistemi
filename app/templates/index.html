@@ -165,14 +165,34 @@
                                 <span class="text-gray-400">-</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600">{{ tire.brand }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {% if tire.mevsim %}
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    {{ tire.mevsim }}
-                                </span>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            {% if tire.tire_brands %}
+                                <div class="flex flex-col gap-2">
+                                    {% for brand in tire.tire_brands %}
+                                        <div class="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 rounded border border-blue-200 text-blue-700 text-xs font-semibold">{{ brand or '-' }}</div>
+                                    {% endfor %}
+                                </div>
                             {% else %}
-                                <span class="text-gray-400">-</span>
+                                <span class="text-gray-400">{{ tire.brand or '-' }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            {% if tire.tire_mevsims %}
+                                <div class="flex flex-col gap-2">
+                                    {% for mev in tire.tire_mevsims %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            {{ mev or '-' }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {% if tire.mevsim %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        {{ tire.mevsim }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-gray-400">-</span>
+                                {% endif %}
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">{{ tire.rack_code }}</td>
