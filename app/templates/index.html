@@ -167,9 +167,11 @@
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-900">
                             {% if tire.tire_brands %}
-                                <div class="flex flex-col gap-2">
+                                <div class="flex flex-col gap-5">
                                     {% for brand in tire.tire_brands %}
-                                        <div class="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 rounded border border-blue-200 text-blue-700 text-xs font-semibold">{{ brand or '-' }}</div>
+                                        <div class="inline-flex items-center gap-1.5 px-2 py-1.5 bg-blue-50 rounded border border-blue-200 text-blue-700 text-sm font-semibold min-h-[36px]">
+                                            {{ brand or '-' }}
+                                        </div>
                                     {% endfor %}
                                 </div>
                             {% else %}
@@ -178,16 +180,16 @@
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-900">
                             {% if tire.tire_mevsims %}
-                                <div class="flex flex-col gap-2">
+                                <div class="flex flex-col gap-5">
                                     {% for mev in tire.tire_mevsims %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <span class="inline-flex items-center justify-center px-2 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800 min-h-[36px]">
                                             {{ mev or '-' }}
                                         </span>
                                     {% endfor %}
                                 </div>
                             {% else %}
                                 {% if tire.mevsim %}
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <span class="inline-flex items-center justify-center px-2 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800 min-h-[36px]">
                                         {{ tire.mevsim }}
                                     </span>
                                 {% else %}
