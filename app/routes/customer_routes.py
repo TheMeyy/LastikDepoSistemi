@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List
 from app.models.database import get_db
 from app.models.models import Customer
@@ -11,6 +12,14 @@ router = APIRouter(prefix="/api/customers", tags=["customers"])
 @router.post("/", response_model=CustomerRead, status_code=status.HTTP_201_CREATED)
 def create_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
     """Create a new customer"""
+    existing = db.query(Customer).filter(
+        func.lower(Customer.ad_soyad) == func.lower(customer.ad_soyad)
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bu isimle bir müşteri zaten kayıtlı."
+        )
     db_customer = Customer(
         ad_soyad=customer.ad_soyad,
         telefon=customer.telefon,
@@ -53,6 +62,16 @@ def update_customer(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Customer with ID {customer_id} not found"
+        )
+    # Enforce case-insensitive uniqueness on name (excluding current record)
+    existing = db.query(Customer).filter(
+        func.lower(Customer.ad_soyad) == func.lower(customer.ad_soyad),
+        Customer.id != customer_id
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bu isimle bir müşteri zaten kayıtlı."
         )
     
     db_customer.ad_soyad = customer.ad_soyad

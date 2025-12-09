@@ -1446,9 +1446,14 @@ async def musteri_gecmisi(
             
             # Build old brand/mevsim lists to align per tire entry
             if eski_ebat_list:
-                if item.eski_lastik_marka:
+                # Prefer embedded brand/mevsim in each tire entry if present
+                for entry in eski_ebat_list:
+                    eski_marka_list.append(entry.get("brand") if isinstance(entry, dict) else None)
+                    eski_mevsim_list.append(entry.get("mevsim") if isinstance(entry, dict) else None)
+                # Fallback: if still empty or all None, repeat legacy values
+                if not any(eski_marka_list) and item.eski_lastik_marka:
                     eski_marka_list = [item.eski_lastik_marka] * len(eski_ebat_list)
-                if eski_mevsim:
+                if not any(eski_mevsim_list) and eski_mevsim:
                     eski_mevsim_list = [eski_mevsim] * len(eski_ebat_list)
 
             # Build new brand/mevsim lists fallback if not provided

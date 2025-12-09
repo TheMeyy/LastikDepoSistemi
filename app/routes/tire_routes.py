@@ -6,6 +6,7 @@ from datetime import datetime
 from app.models.database import get_db
 from app.models.models import Tire, Brand, Customer, Rack, TireHistory
 from app.models.models import TireDurumEnum as ModelTireDurumEnum
+from app.models.models import MevsimEnum as ModelMevsimEnum
 from app.models.models import IslemTuruEnum as ModelIslemTuruEnum
 from app.schemas.tire_schema import TireCreate, TireRead
 from app.utils.enums import TireDurumEnum, MevsimEnum, DisDurumuEnum, BRAND_LIST, RackDurumEnum, IslemTuruEnum
@@ -651,7 +652,12 @@ def create_tire_history_entry(
         brand_val = getattr(old_tire, f'tire{i}_brand', None) or (old_tire.brand.marka_adi if old_tire.brand else None)
         mevsim_val = getattr(old_tire, f'tire{i}_mevsim', None) or getattr(old_tire, 'mevsim', None)
         if size:
-            old_tire_sizes.append({"size": size, "year": prod_date})
+            old_tire_sizes.append({
+                "size": size,
+                "year": prod_date,
+                "brand": brand_val,
+                "mevsim": mevsim_val.value if hasattr(mevsim_val, 'value') else mevsim_val
+            })
             old_tire_brands.append(brand_val)
             old_tire_mevsims.append(mevsim_val.value if hasattr(mevsim_val, 'value') else mevsim_val)
     
@@ -667,7 +673,12 @@ def create_tire_history_entry(
             brand_val = new_tire.brand.marka_adi
         mevsim_val = getattr(new_tire, f'tire{i}_mevsim', None) or getattr(new_tire, 'mevsim', None)
         if size:
-            new_tire_sizes.append({"size": size, "year": prod_date})
+            new_tire_sizes.append({
+                "size": size,
+                "year": prod_date,
+                "brand": brand_val,
+                "mevsim": mevsim_val.value if hasattr(mevsim_val, 'value') else mevsim_val
+            })
             new_tire_brands.append(brand_val)
             new_tire_mevsims.append(mevsim_val.value if hasattr(mevsim_val, 'value') else mevsim_val)
     
@@ -800,6 +811,14 @@ def change_tire(
         # Get next serial number
         seri_no = get_next_seri_no(db)
         
+        def per_tire_brand(i: int):
+            val = getattr(tire, f"tire{i}_brand", None)
+            return val or tire.brand
+
+        def per_tire_mevsim(i: int):
+            val = getattr(tire, f"tire{i}_mevsim", None)
+            return val or tire.mevsim
+
         new_tire = Tire(
             seri_no=seri_no,
             musteri_id=tire.musteri_id,
@@ -814,16 +833,28 @@ def change_tire(
             durum=durum_value,
             tire1_size=tire.tire1_size,
             tire1_production_date=tire.tire1_production_date,
+            tire1_brand=per_tire_brand(1),
+            tire1_mevsim=per_tire_mevsim(1),
             tire2_size=tire.tire2_size,
             tire2_production_date=tire.tire2_production_date,
+            tire2_brand=per_tire_brand(2),
+            tire2_mevsim=per_tire_mevsim(2),
             tire3_size=tire.tire3_size,
             tire3_production_date=tire.tire3_production_date,
+            tire3_brand=per_tire_brand(3),
+            tire3_mevsim=per_tire_mevsim(3),
             tire4_size=tire.tire4_size,
             tire4_production_date=tire.tire4_production_date,
+            tire4_brand=per_tire_brand(4),
+            tire4_mevsim=per_tire_mevsim(4),
             tire5_size=tire.tire5_size,
             tire5_production_date=tire.tire5_production_date,
+            tire5_brand=per_tire_brand(5),
+            tire5_mevsim=per_tire_mevsim(5),
             tire6_size=tire.tire6_size,
-            tire6_production_date=tire.tire6_production_date
+            tire6_production_date=tire.tire6_production_date,
+            tire6_brand=per_tire_brand(6),
+            tire6_mevsim=per_tire_mevsim(6)
         )
         db.add(new_tire)
         
