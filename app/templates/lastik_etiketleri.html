@@ -9,7 +9,7 @@
 // Safe wrapper function to handle button clicks
 window.handleLabelButtonClickSafe = function(button) {
     if (typeof handleLabelButtonClick === 'function') {
-        const tireId = parseInt(button.getAttribute('data-tire-id')) || 0;
+        let tireId = parseInt(button.getAttribute('data-tire-id')) || 0;
         console.log('handleLabelButtonClickSafe - tireId:', tireId);
         
         // Get tire sizes from global object
@@ -55,26 +55,44 @@ window.handleLabelButtonClick = function(button, tireSizesFromTemplate) {
         const disDurumu = button.getAttribute('data-dis-durumu') || '';
         const girisTarihi = button.getAttribute('data-giris-tarihi') || '';
         
-        // Use tireSizes from template parameter if available, otherwise try to parse from attribute
+        // Use tireSizes from template parameter if available, otherwise parse from attribute/global
         let tireSizes = [];
+        let tireBrands = [];
+        let tireMevsims = [];
         if (tireSizesFromTemplate && Array.isArray(tireSizesFromTemplate)) {
             tireSizes = tireSizesFromTemplate.filter(size => size && String(size).trim() !== '');
-            console.log('Using tireSizes from template parameter:', tireSizes, 'length:', tireSizes.length);
         } else {
-            // Fallback: try to parse from attribute
             const tireSizesJson = button.getAttribute('data-tire-sizes') || '[]';
-            console.log('tireSizesJson from attribute:', tireSizesJson);
             try {
-                if (tireSizesJson && tireSizesJson.trim() !== '' && tireSizesJson !== '[]' && tireSizesJson !== 'null') {
-                    const parsed = JSON.parse(tireSizesJson);
-                    if (Array.isArray(parsed)) {
-                        tireSizes = parsed.filter(size => size && String(size).trim() !== '');
-                        console.log('Parsed tireSizes from attribute:', tireSizes, 'length:', tireSizes.length);
-                    }
+                const parsed = JSON.parse(tireSizesJson);
+                if (Array.isArray(parsed)) {
+                    tireSizes = parsed.filter(size => size && String(size).trim() !== '');
                 }
             } catch (e) {
-                console.error('Error parsing tire sizes from attribute:', e, tireSizesJson);
+                console.error('Error parsing tire sizes from attribute:', e);
             }
+        }
+        // Try globals as fallback
+        const tireIdFromGlobals = tireId || parseInt(button.getAttribute('data-tire-id')) || 0;
+        if ((!tireSizes || tireSizes.length === 0) && window.tireSizesData && window.tireSizesData[tireIdFromGlobals]) {
+            tireSizes = (window.tireSizesData[tireIdFromGlobals] || []).filter(s => s && String(s).trim() !== '');
+        }
+        // Parse brand/mevsim arrays from attributes or globals
+        try {
+            const brandsJson = button.getAttribute('data-tire-brands') || '[]';
+            const parsedBrands = JSON.parse(brandsJson);
+            if (Array.isArray(parsedBrands)) tireBrands = parsedBrands;
+        } catch (e) { console.warn('Brand parse failed'); }
+        try {
+            const mevsimsJson = button.getAttribute('data-tire-mevsims') || '[]';
+            const parsedMevsims = JSON.parse(mevsimsJson);
+            if (Array.isArray(parsedMevsims)) tireMevsims = parsedMevsims;
+        } catch (e) { console.warn('Mevsim parse failed'); }
+        if ((!tireBrands || tireBrands.length === 0) && window.tireBrandsData && window.tireBrandsData[tireIdFromGlobals]) {
+            tireBrands = window.tireBrandsData[tireIdFromGlobals] || [];
+        }
+        if ((!tireMevsims || tireMevsims.length === 0) && window.tireMevsimsData && window.tireMevsimsData[tireIdFromGlobals]) {
+            tireMevsims = window.tireMevsimsData[tireIdFromGlobals] || [];
         }
         
         console.log('Final tireSizes array:', tireSizes, 'length:', tireSizes.length);
@@ -82,10 +100,10 @@ window.handleLabelButtonClick = function(button, tireSizesFromTemplate) {
         
         // Call the real showLabelPreview function
         if (typeof window._realShowLabelPreview === 'function') {
-            window._realShowLabelPreview(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, mevsim, rackCode, disDurumu, girisTarihi, seriNo);
+            window._realShowLabelPreview(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, mevsim, rackCode, disDurumu, girisTarihi, seriNo, tireBrands, tireMevsims);
         } else {
             // Fallback to window.showLabelPreview (stub)
-            window.showLabelPreview(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, mevsim, rackCode, disDurumu, girisTarihi, seriNo);
+            window.showLabelPreview(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, mevsim, rackCode, disDurumu, girisTarihi, seriNo, tireBrands, tireMevsims);
         }
     } catch (error) {
         console.error('Error in handleLabelButtonClick:', error);
@@ -385,13 +403,21 @@ console.log('showLabelPreview stub function defined:', typeof window.showLabelPr
                         <script>
                         // Global object to store tire sizes by tire ID
                         window.tireSizesData = window.tireSizesData || {};
+                        window.tireBrandsData = window.tireBrandsData || {};
+                        window.tireMevsimsData = window.tireMevsimsData || {};
                         {% for tire in tires %}
                         {% set tire_sizes_list = tire.tire_sizes if tire.tire_sizes else [] %}
+                        {% set tire_brands_list = tire.tire_brands if tire.tire_brands else [] %}
+                        {% set tire_mevsims_list = tire.tire_mevsims if tire.tire_mevsims else [] %}
                         window.tireSizesData[{{ tire.id }}] = {{ tire_sizes_list|tojson|safe }};
+                        window.tireBrandsData[{{ tire.id }}] = {{ tire_brands_list|tojson|safe }};
+                        window.tireMevsimsData[{{ tire.id }}] = {{ tire_mevsims_list|tojson|safe }};
                         {% endfor %}
                         </script>
                         {% for tire in tires %}
                         {% set tire_sizes_list = tire.tire_sizes if tire.tire_sizes else [] %}
+                        {% set tire_brands_list = tire.tire_brands if tire.tire_brands else [] %}
+                        {% set tire_mevsims_list = tire.tire_mevsims if tire.tire_mevsims else [] %}
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ tire.customer_name }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ tire.customer_plate }}</td>
@@ -417,7 +443,10 @@ console.log('showLabelPreview stub function defined:', typeof window.showLabelPr
                                         data-mevsim="{{ tire.mevsim|replace("'", "&#39;")|replace('"', '&quot;') if tire.mevsim else '' }}"
                                         data-rack-code="{{ tire.rack_code|replace("'", "&#39;")|replace('"', '&quot;') }}"
                                         data-dis-durumu="{{ tire.dis_durumu|replace("'", "&#39;")|replace('"', '&quot;') }}"
-                                        data-giris-tarihi="{{ tire.giris_tarihi.strftime('%d.%m.%Y') if tire.giris_tarihi else '' }}">
+                                        data-giris-tarihi="{{ tire.giris_tarihi.strftime('%d.%m.%Y') if tire.giris_tarihi else '' }}"
+                                        data-tire-brands='{{ tire_brands_list|tojson|safe }}'
+                                        data-tire-mevsims='{{ tire_mevsims_list|tojson|safe }}'
+                                        data-tire-sizes='{{ tire_sizes_list|tojson|safe }}'>
                                     Etiket Oluştur
                                 </button>
                             </td>
@@ -492,7 +521,7 @@ if (typeof window.handleLabelButtonClick === 'undefined') {
 
 
 // Make showLabelPreview globally available - this is the real implementation
-window._realShowLabelPreview = function(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, mevsim, rackCode, disDurumu, girisTarihi, seriNo) {
+window._realShowLabelPreview = function(tireId, customerName, customerPhone, customerPlate, tireSizes, brand, mevsim, rackCode, disDurumu, girisTarihi, seriNo, tireBrands = [], tireMevsims = []) {
     try {
         console.log('_realShowLabelPreview called with:', { tireId, customerName, tireSizes, brand, mevsim, rackCode, disDurumu, seriNo });
         
@@ -516,7 +545,7 @@ window._realShowLabelPreview = function(tireId, customerName, customerPhone, cus
             }
         }
         
-        // Store all tire sizes for dynamic label generation
+        // Store all tire sizes and per-tire brand/mevsim for dynamic label generation
         window.currentTireSizes = tireSizesArray;
         window.currentLabelData = {
             customerName: customerName || '',
@@ -528,6 +557,8 @@ window._realShowLabelPreview = function(tireId, customerName, customerPhone, cus
             disDurumu: disDurumu || '',
             girisTarihi: girisTarihi || '',
             tireSizes: tireSizesArray,
+            tireBrands: Array.isArray(tireBrands) ? tireBrands : [],
+            tireMevsims: Array.isArray(tireMevsims) ? tireMevsims : [],
             seriNo: seriNo || '' // Müşterinin seri numarası - tüm etiketlerde aynı
         };
         
@@ -585,6 +616,13 @@ function getLabelData() {
             data.tireSizes = [];
         }
     }
+    // Ensure tireBrands and tireMevsims are arrays
+    if (data.tireBrands && !Array.isArray(data.tireBrands)) {
+        try { data.tireBrands = JSON.parse(data.tireBrands); } catch (e) { data.tireBrands = []; }
+    }
+    if (data.tireMevsims && !Array.isArray(data.tireMevsims)) {
+        try { data.tireMevsims = JSON.parse(data.tireMevsims); } catch (e) { data.tireMevsims = []; }
+    }
     
     console.log('getLabelData - returning data:', data, 'tireSizes:', data.tireSizes);
     return data;
@@ -605,8 +643,10 @@ function generateLabels() {
         console.log('generateLabels - data:', data);
         console.log('generateLabels - data.tireSizes:', data.tireSizes, 'type:', typeof data.tireSizes, 'isArray:', Array.isArray(data.tireSizes), 'length:', data.tireSizes ? data.tireSizes.length : 0);
         
-        // Ensure tireSizes is an array
+        // Ensure tireSizes/brands/mevsims are arrays
         let tireSizesArray = [];
+        let tireBrandsArray = [];
+        let tireMevsimsArray = [];
         if (data.tireSizes) {
             if (Array.isArray(data.tireSizes)) {
                 tireSizesArray = data.tireSizes.filter(size => size && String(size).trim() !== '');
@@ -616,6 +656,20 @@ function generateLabels() {
                 } catch (e) {
                     tireSizesArray = [data.tireSizes].filter(size => size && String(size).trim() !== '');
                 }
+            }
+        }
+        if (data.tireBrands) {
+            if (Array.isArray(data.tireBrands)) {
+                tireBrandsArray = data.tireBrands;
+            } else if (typeof data.tireBrands === 'string') {
+                try { tireBrandsArray = JSON.parse(data.tireBrands); } catch (e) { tireBrandsArray = []; }
+            }
+        }
+        if (data.tireMevsims) {
+            if (Array.isArray(data.tireMevsims)) {
+                tireMevsimsArray = data.tireMevsims;
+            } else if (typeof data.tireMevsims === 'string') {
+                try { tireMevsimsArray = JSON.parse(data.tireMevsims); } catch (e) { tireMevsimsArray = []; }
             }
         }
         
@@ -652,6 +706,8 @@ function generateLabels() {
         
         // Update data.tireSizes to ensure it's an array
         data.tireSizes = tireSizesArray;
+        data.tireBrands = tireBrandsArray;
+        data.tireMevsims = tireMevsimsArray;
         
         let html = '<div id="printArea" class="flex flex-col items-center" style="font-family: \'Poppins\', sans-serif; padding: 20px;">';
         
@@ -683,6 +739,8 @@ function generateLabels() {
         // Ensure data.tireSizes is set to the filtered array
         const labelData = { ...data };
         labelData.tireSizes = tireSizesArray;
+        labelData.tireBrands = tireBrandsArray;
+        labelData.tireMevsims = tireMevsimsArray;
         
         // Müşterinin seri numarası - tüm etiketlerde aynı
         const seriNo = data.seriNo || '';
@@ -723,36 +781,43 @@ function updateLabels() {
 }
 
 function createDepoLabel(data, tireSize, width, height, seriNo) {
-    // Format all tire sizes in a grid (2 columns)
-    let tireSizesHtml = '';
-    console.log('createDepoLabel - data.tireSizes:', data.tireSizes, 'tireSize:', tireSize);
-    
-    // Ensure tireSizes is an array
+    // Prepare per-tire rows (ebat / marka / mevsim)
     let tireSizesArray = [];
+    let tireBrandsArray = [];
+    let tireMevsimsArray = [];
     if (data.tireSizes) {
         if (Array.isArray(data.tireSizes)) {
             tireSizesArray = data.tireSizes.filter(size => size && String(size).trim() !== '');
         } else if (typeof data.tireSizes === 'string') {
-            try {
-                tireSizesArray = JSON.parse(data.tireSizes).filter(size => size && String(size).trim() !== '');
-            } catch (e) {
-                tireSizesArray = [data.tireSizes].filter(size => size && String(size).trim() !== '');
-            }
+            try { tireSizesArray = JSON.parse(data.tireSizes).filter(size => size && String(size).trim() !== ''); } catch (e) { tireSizesArray = [data.tireSizes]; }
         }
     }
-    
-    // Check if we have tire sizes array
-    if (tireSizesArray.length > 0) {
-        tireSizesHtml = '<div class="label-tire-sizes-grid">';
-        tireSizesArray.forEach((size, index) => {
-            tireSizesHtml += `<div style="font-size: 6pt; line-height: 1.2;">${index + 1}. ${escapeHtml(String(size))}</div>`;
-        });
-        tireSizesHtml += '</div>';
-    } else if (tireSize && String(tireSize).trim() !== '') {
-        tireSizesHtml = `<span class="label-value" style="margin-left: 0;">${escapeHtml(String(tireSize))}</span>`;
-    } else {
-        tireSizesHtml = '<span class="label-value" style="margin-left: 0;">-</span>';
+    if (data.tireBrands) {
+        if (Array.isArray(data.tireBrands)) tireBrandsArray = data.tireBrands;
+        else if (typeof data.tireBrands === 'string') { try { tireBrandsArray = JSON.parse(data.tireBrands); } catch (e) {} }
     }
+    if (data.tireMevsims) {
+        if (Array.isArray(data.tireMevsims)) tireMevsimsArray = data.tireMevsims;
+        else if (typeof data.tireMevsims === 'string') { try { tireMevsimsArray = JSON.parse(data.tireMevsims); } catch (e) {} }
+    }
+    const rowCount = Math.max(tireSizesArray.length, tireBrandsArray.length, tireMevsimsArray.length) || (tireSize ? 1 : 0);
+    const isTight = rowCount > 4;
+    const tableFont = isTight ? '5pt' : '6pt';
+    const rowGap = isTight ? '0.25mm' : '0.6mm';
+    const colGap = isTight ? '0.7mm' : '1mm';
+    let tireTableHtml = '<div style="display:inline-block; vertical-align:top; margin-left:0;">';
+    tireTableHtml += `<div style="display:grid; grid-template-columns: repeat(3, auto); gap: ${rowGap} ${colGap}; font-size:${tableFont}; line-height:1.1;">`;
+    tireTableHtml += '<span style="font-weight:700;">Ebat</span><span style="font-weight:700;">Marka</span><span style="font-weight:700;">Mevsim</span>';
+    for (let i = 0; i < rowCount; i++) {
+        const sizeVal = tireSizesArray[i] || tireSize || '';
+        const brandVal = tireBrandsArray[i] || data.brand || '';
+        const mevVal = tireMevsimsArray[i] || data.mevsim || '';
+        tireTableHtml += `<span>${escapeHtml(String(sizeVal || '-'))}</span><span>${escapeHtml(String(brandVal || '-'))}</span><span>${escapeHtml(String(mevVal || '-'))}</span>`;
+    }
+    if (rowCount === 0) {
+        tireTableHtml += `<span>${escapeHtml(String(tireSize || '-'))}</span><span>${escapeHtml(String(data.brand || '-'))}</span><span>${escapeHtml(String(data.mevsim || '-'))}</span>`;
+    }
+    tireTableHtml += '</div></div>';
     
     // Seri numarası için dinamik font boyutu - uzun numaralar için sola doğru büyüsün
     // Seri no boşsa veya sadece boşluk içeriyorsa gösterme
@@ -785,49 +850,59 @@ function createDepoLabel(data, tireSize, width, height, seriNo) {
             <div class="label-content">
                 <div><span class="label-field">İsim:</span> <span class="label-value">${escapeHtml(data.customerName)}</span></div>
                 <div><span class="label-field">Telefon:</span> <span class="label-value">${escapeHtml(data.customerPhone)}</span></div>
-                <div><span class="label-field">Marka / Mevsim:</span> <span class="label-value">${escapeHtml(data.brand || '-')} / ${escapeHtml(data.mevsim || '-')}</span></div>
                 <div style="margin-bottom: 2mm;">
-                    <span class="label-field">Lastik Ebatı:</span>
-                    ${tireSizesHtml}
+                    <span class="label-field">Lastik Bilgisi:</span>
+                    ${tireTableHtml}
                 </div>
                 <div><span class="label-field">Raf Kodu:</span> <span class="label-value">${escapeHtml(data.rackCode)}</span></div>
                 <div><span class="label-field">Diş Durumu:</span> <span class="label-value">${escapeHtml(data.disDurumu)}</span></div>
                 <div><span class="label-field">Plaka:</span> <span class="label-value">${escapeHtml(data.customerPlate)}</span></div>
                 <div><span class="label-field">Giriş Tarihi:</span> <span class="label-value">${escapeHtml(data.girisTarihi)}</span></div>
-                <div class="label-phone-numbers" style="text-align: center; margin-top: auto; padding-top: 1mm; font-size: 6.5pt; font-weight: 600; color: #1a1a1a; flex-shrink: 0;">0537 873 74 14  |  0544 644 46 00</div>
+                <div class="label-phone-numbers" style="text-align: center; margin-top: auto; padding-top: 0; padding-bottom: 0.4mm; font-size: 6pt; font-weight: 600; color: #1a1a1a; flex-shrink: 0;">0537 873 74 14  |  0544 644 46 00</div>
             </div>
         </div>
     `;
 }
 
 function createMusteriLabel(data, width, height, seriNo) {
-    // Format all tire sizes in a grid (2 columns)
-    let tireSizesHtml = '';
-    console.log('createMusteriLabel - data.tireSizes:', data.tireSizes);
-    
-    // Ensure tireSizes is an array
+    // Prepare per-tire rows (ebat / marka / mevsim)
     let tireSizesArray = [];
+    let tireBrandsArray = [];
+    let tireMevsimsArray = [];
     if (data.tireSizes) {
         if (Array.isArray(data.tireSizes)) {
             tireSizesArray = data.tireSizes.filter(size => size && String(size).trim() !== '');
         } else if (typeof data.tireSizes === 'string') {
-            try {
-                tireSizesArray = JSON.parse(data.tireSizes).filter(size => size && String(size).trim() !== '');
-            } catch (e) {
-                tireSizesArray = [data.tireSizes].filter(size => size && String(size).trim() !== '');
-            }
+            try { tireSizesArray = JSON.parse(data.tireSizes).filter(size => size && String(size).trim() !== ''); } catch (e) { tireSizesArray = [data.tireSizes]; }
         }
     }
-    
-    if (tireSizesArray.length > 0) {
-        tireSizesHtml = '<div class="label-tire-sizes-grid">';
-        tireSizesArray.forEach((size, index) => {
-            tireSizesHtml += `<div style="font-size: 6pt; line-height: 1.2;">${index + 1}. ${escapeHtml(String(size))}</div>`;
-        });
-        tireSizesHtml += '</div>';
-    } else {
-        tireSizesHtml = `<span class="label-value" style="margin-left: 0;">${escapeHtml(data.ebat || '-')}</span>`;
+    if (data.tireBrands) {
+        if (Array.isArray(data.tireBrands)) tireBrandsArray = data.tireBrands;
+        else if (typeof data.tireBrands === 'string') { try { tireBrandsArray = JSON.parse(data.tireBrands); } catch (e) {} }
     }
+    if (data.tireMevsims) {
+        if (Array.isArray(data.tireMevsims)) tireMevsimsArray = data.tireMevsims;
+        else if (typeof data.tireMevsims === 'string') { try { tireMevsimsArray = JSON.parse(data.tireMevsims); } catch (e) {} }
+    }
+    const rowCount = Math.max(tireSizesArray.length, tireBrandsArray.length, tireMevsimsArray.length) || 0;
+    const isTight = rowCount > 4;
+    const tableFont = isTight ? '5pt' : '6pt';
+    const rowGap = isTight ? '0.25mm' : '0.6mm';
+    const colGap = isTight ? '0.7mm' : '1mm';
+    let tireTableHtml = '<div style="display:inline-block; vertical-align:top; margin-left:0;">';
+    tireTableHtml += `<div style="display:grid; grid-template-columns: repeat(3, auto); gap: ${rowGap} ${colGap}; font-size:${tableFont}; line-height:1.1;">`;
+    tireTableHtml += '<span style="font-weight:700;">Ebat</span><span style="font-weight:700;">Marka</span><span style="font-weight:700;">Mevsim</span>';
+    if (rowCount > 0) {
+        for (let i = 0; i < rowCount; i++) {
+            const sizeVal = tireSizesArray[i] || data.ebat || '';
+            const brandVal = tireBrandsArray[i] || data.brand || '';
+            const mevVal = tireMevsimsArray[i] || data.mevsim || '';
+            tireTableHtml += `<span>${escapeHtml(String(sizeVal || '-'))}</span><span>${escapeHtml(String(brandVal || '-'))}</span><span>${escapeHtml(String(mevVal || '-'))}</span>`;
+        }
+    } else {
+        tireTableHtml += `<span>${escapeHtml(String(data.ebat || '-'))}</span><span>${escapeHtml(String(data.brand || '-'))}</span><span>${escapeHtml(String(data.mevsim || '-'))}</span>`;
+    }
+    tireTableHtml += '</div></div>';
     
     // Seri numarası için dinamik font boyutu - uzun numaralar için sola doğru büyüsün
     // Seri no boşsa veya sadece boşluk içeriyorsa gösterme
@@ -860,10 +935,9 @@ function createMusteriLabel(data, width, height, seriNo) {
             <div class="label-content">
                 <div><span class="label-field">İsim:</span> <span class="label-value">${escapeHtml(data.customerName)}</span></div>
                 <div><span class="label-field">Telefon:</span> <span class="label-value">${escapeHtml(data.customerPhone)}</span></div>
-                <div><span class="label-field">Marka / Mevsim:</span> <span class="label-value">${escapeHtml(data.brand || '-')} / ${escapeHtml(data.mevsim || '-')}</span></div>
                 <div style="margin-bottom: 2mm;">
-                    <span class="label-field">Lastik Ebatı:</span>
-                    ${tireSizesHtml}
+                    <span class="label-field">Lastik Bilgisi:</span>
+                    ${tireTableHtml}
                 </div>
                 <div><span class="label-field">Raf Kodu:</span> <span class="label-value">${escapeHtml(data.rackCode)}</span></div>
                 <div><span class="label-field">Diş Durumu:</span> <span class="label-value">${escapeHtml(data.disDurumu)}</span></div>
@@ -876,33 +950,44 @@ function createMusteriLabel(data, width, height, seriNo) {
 }
 
 function createIsyeriLabel(data, width, height, seriNo) {
-    // Format all tire sizes in a grid (2 columns)
-    let tireSizesHtml = '';
-    console.log('createIsyeriLabel - data.tireSizes:', data.tireSizes);
-    
-    // Ensure tireSizes is an array
+    // Prepare per-tire rows (ebat / marka / mevsim)
     let tireSizesArray = [];
+    let tireBrandsArray = [];
+    let tireMevsimsArray = [];
     if (data.tireSizes) {
         if (Array.isArray(data.tireSizes)) {
             tireSizesArray = data.tireSizes.filter(size => size && String(size).trim() !== '');
         } else if (typeof data.tireSizes === 'string') {
-            try {
-                tireSizesArray = JSON.parse(data.tireSizes).filter(size => size && String(size).trim() !== '');
-            } catch (e) {
-                tireSizesArray = [data.tireSizes].filter(size => size && String(size).trim() !== '');
-            }
+            try { tireSizesArray = JSON.parse(data.tireSizes).filter(size => size && String(size).trim() !== ''); } catch (e) { tireSizesArray = [data.tireSizes]; }
         }
     }
-    
-    if (tireSizesArray.length > 0) {
-        tireSizesHtml = '<div class="label-tire-sizes-grid">';
-        tireSizesArray.forEach((size, index) => {
-            tireSizesHtml += `<div style="font-size: 6pt; line-height: 1.2;">${index + 1}. ${escapeHtml(String(size))}</div>`;
-        });
-        tireSizesHtml += '</div>';
-    } else {
-        tireSizesHtml = `<span class="label-value" style="margin-left: 0;">${escapeHtml(data.ebat || '-')}</span>`;
+    if (data.tireBrands) {
+        if (Array.isArray(data.tireBrands)) tireBrandsArray = data.tireBrands;
+        else if (typeof data.tireBrands === 'string') { try { tireBrandsArray = JSON.parse(data.tireBrands); } catch (e) {} }
     }
+    if (data.tireMevsims) {
+        if (Array.isArray(data.tireMevsims)) tireMevsimsArray = data.tireMevsims;
+        else if (typeof data.tireMevsims === 'string') { try { tireMevsimsArray = JSON.parse(data.tireMevsims); } catch (e) {} }
+    }
+    const rowCount = Math.max(tireSizesArray.length, tireBrandsArray.length, tireMevsimsArray.length) || 0;
+    const isTight = rowCount > 4;
+    const tableFont = isTight ? '5pt' : '6pt';
+    const rowGap = isTight ? '0.25mm' : '0.6mm';
+    const colGap = isTight ? '0.7mm' : '1mm';
+    let tireTableHtml = '<div style="display:inline-block; vertical-align:top; margin-left:0;">';
+    tireTableHtml += `<div style="display:grid; grid-template-columns: repeat(3, auto); gap: ${rowGap} ${colGap}; font-size:${tableFont}; line-height:1.1;">`;
+    tireTableHtml += '<span style="font-weight:700;">Ebat</span><span style="font-weight:700;">Marka</span><span style="font-weight:700;">Mevsim</span>';
+    if (rowCount > 0) {
+        for (let i = 0; i < rowCount; i++) {
+            const sizeVal = tireSizesArray[i] || data.ebat || '';
+            const brandVal = tireBrandsArray[i] || data.brand || '';
+            const mevVal = tireMevsimsArray[i] || data.mevsim || '';
+            tireTableHtml += `<span>${escapeHtml(String(sizeVal || '-'))}</span><span>${escapeHtml(String(brandVal || '-'))}</span><span>${escapeHtml(String(mevVal || '-'))}</span>`;
+        }
+    } else {
+        tireTableHtml += `<span>${escapeHtml(String(data.ebat || '-'))}</span><span>${escapeHtml(String(data.brand || '-'))}</span><span>${escapeHtml(String(data.mevsim || '-'))}</span>`;
+    }
+    tireTableHtml += '</div></div>';
     
     // Seri numarası için dinamik font boyutu - uzun numaralar için sola doğru büyüsün
     // Seri no boşsa veya sadece boşluk içeriyorsa gösterme
@@ -935,10 +1020,9 @@ function createIsyeriLabel(data, width, height, seriNo) {
             <div class="label-content">
                 <div><span class="label-field">İsim:</span> <span class="label-value">${escapeHtml(data.customerName)}</span></div>
                 <div><span class="label-field">Telefon:</span> <span class="label-value">${escapeHtml(data.customerPhone)}</span></div>
-                <div><span class="label-field">Marka / Mevsim:</span> <span class="label-value">${escapeHtml(data.brand || '-')} / ${escapeHtml(data.mevsim || '-')}</span></div>
                 <div style="margin-bottom: 2mm;">
-                    <span class="label-field">Lastik Ebatı:</span>
-                    ${tireSizesHtml}
+                    <span class="label-field">Lastik Bilgisi:</span>
+                    ${tireTableHtml}
                 </div>
                 <div><span class="label-field">Raf Kodu:</span> <span class="label-value">${escapeHtml(data.rackCode)}</span></div>
                 <div><span class="label-field">Diş Durumu:</span> <span class="label-value">${escapeHtml(data.disDurumu)}</span></div>
@@ -1309,35 +1393,46 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
     doc.text(String(data.customerPhone || ''), valueX, currentY, { maxWidth: maxValueWidth });
     currentY += spacing;
     
-    // Marka / Mevsim (Türkçe karakterler ASCII'ye çevriliyor)
+    // Lastik Bilgisi - Ebat / Marka / Mevsim tablo formatında
     doc.setFont('helvetica', 'bold');
-    doc.text('Marka / Mevsim:', labelX, currentY);
+    doc.text('Lastik Bilgisi:', labelX, currentY);
     doc.setFont('helvetica', 'normal');
-    const brandMevsim = `${data.brand || '-'} / ${data.mevsim || '-'}`;
-    doc.text(truncate(convertTurkishToASCII(brandMevsim), 22), valueX, currentY, { maxWidth: maxValueWidth });
-    currentY += spacing;
-    
-    // Lastik Ebatı - Show all tire sizes in grid format
-    doc.setFont('helvetica', 'bold');
-    doc.text('Lastik Ebati:', labelX, currentY);
-    doc.setFont('helvetica', 'normal');
-    if (data.tireSizes && data.tireSizes.length > 0) {
-        // Show all tire sizes in 2 columns, aligned with label - Çerçeveyi tam doldurmak için spacing artırıldı
-        let tireY = currentY;
-        data.tireSizes.forEach((size, index) => {
-            const col = index % 2;
-            const row = Math.floor(index / 2);
-            const xPos = valueX + (col * 18); // 18mm spacing for columns
-            const yPos = tireY + (row * 3.4); // 3.4mm spacing for rows (artırıldı)
-            doc.text(`${index + 1}. ${String(size || '')}`, xPos, yPos, { maxWidth: 15 });
+    let rows = [];
+    const sizes = Array.isArray(data.tireSizes) ? data.tireSizes : [];
+    const brands = Array.isArray(data.tireBrands) ? data.tireBrands : [];
+    const mevsims = Array.isArray(data.tireMevsims) ? data.tireMevsims : [];
+    const rc = Math.max(sizes.length, brands.length, mevsims.length) || (tireSize ? 1 : 0);
+    const tight = rc > 4;
+    for (let i = 0; i < rc; i++) {
+        rows.push({
+            ebat: sizes[i] || tireSize || data.ebat || '',
+            marka: brands[i] || data.brand || '',
+            mevsim: mevsims[i] || data.mevsim || ''
         });
-        // Move currentY down based on number of rows
-        const rows = Math.ceil(data.tireSizes.length / 2);
-        currentY += (rows * 3.4) + 0.6; // Spacing artırıldı
-    } else {
-        doc.text(String(tireSize || data.ebat || ''), valueX, currentY, { maxWidth: maxValueWidth });
-        currentY += spacing;
     }
+    if (rows.length === 0) {
+        rows.push({ ebat: tireSize || data.ebat || '', marka: data.brand || '', mevsim: data.mevsim || '' });
+    }
+    // Header
+    let tableY = currentY;
+    const col1X = valueX;
+    const col2X = valueX + 18;
+    const col3X = valueX + 35;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Ebat', col1X, tableY);
+    doc.text('Marka', col2X, tableY);
+    doc.text('Mevsim', col3X, tableY);
+    const rowSpacing = tight ? 2.3 : 3.2;
+    tableY += rowSpacing;
+    doc.setFont('helvetica', 'normal');
+    if (tight) doc.setFontSize(4.8);
+    rows.forEach(r => {
+        doc.text(convertTurkishToASCII(String(r.ebat || '-')), col1X, tableY, { maxWidth: 16 });
+        doc.text(convertTurkishToASCII(String(r.marka || '-')), col2X, tableY, { maxWidth: 15 });
+        doc.text(convertTurkishToASCII(String(r.mevsim || '-')), col3X, tableY, { maxWidth: 15 });
+        tableY += rowSpacing;
+    });
+    currentY = tableY - 0.4;
     
     // Raf Kodu
     doc.setFont('helvetica', 'bold');
@@ -1369,7 +1464,7 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
     
     // Firma Telefon Numaraları (en altta, ortalanmış) - Büyük ve koyu vurgulu
     // Etiket yüksekliği içinde kalması için pozisyon ayarlandı
-    doc.setFontSize(5.5);
+    doc.setFontSize(tight ? 5.0 : 5.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(26, 26, 26); // Koyu siyah (#1a1a1a)
     // Etiket alt kenarından 2mm yukarıda telefon numaraları
@@ -1380,8 +1475,10 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
 function printLabels() {
     const data = getLabelData();
     
-    // Ensure tireSizes is an array
+    // Ensure tireSizes/brands/mevsims is an array
     let tireSizesArray = [];
+    let tireBrandsArray = [];
+    let tireMevsimsArray = [];
     if (data.tireSizes) {
         if (Array.isArray(data.tireSizes)) {
             tireSizesArray = data.tireSizes.filter(size => size && String(size).trim() !== '');
@@ -1392,6 +1489,14 @@ function printLabels() {
                 tireSizesArray = [data.tireSizes].filter(size => size && String(size).trim() !== '');
             }
         }
+    }
+    if (data.tireBrands) {
+        if (Array.isArray(data.tireBrands)) tireBrandsArray = data.tireBrands;
+        else if (typeof data.tireBrands === 'string') { try { tireBrandsArray = JSON.parse(data.tireBrands); } catch (e) {} }
+    }
+    if (data.tireMevsims) {
+        if (Array.isArray(data.tireMevsims)) tireMevsimsArray = data.tireMevsims;
+        else if (typeof data.tireMevsims === 'string') { try { tireMevsimsArray = JSON.parse(data.tireMevsims); } catch (e) {} }
     }
     
     const depotLabelCount = tireSizesArray.length > 0 ? tireSizesArray.length : 1;
@@ -1445,6 +1550,8 @@ function printLabels() {
     
     const labelData = { ...data };
     labelData.tireSizes = tireSizesArray;
+    labelData.tireBrands = tireBrandsArray;
+    labelData.tireMevsims = tireMevsimsArray;
     
     // Müşterinin seri numarası - tüm etiketlerde aynı
     const seriNo = data.seriNo || '';

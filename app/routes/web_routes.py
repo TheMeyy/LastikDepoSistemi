@@ -1031,16 +1031,39 @@ async def lastik_etiketleri(
                 print(f"Error converting tire.durum in lastik_etiketleri: {e}")
                 durum_display = "Depoda"
             
-            # Collect all tire sizes
+            # Collect all tire sizes / brands / mevsims (per tire)
             tire_sizes = []
+            tire_brands = []
+            tire_mevsims = []
             for i in range(1, 7):
                 size = getattr(tire, f'tire{i}_size', None)
+                brand_i = getattr(tire, f'tire{i}_brand', None)
+                mevsim_i = getattr(tire, f'tire{i}_mevsim', None)
                 if size and str(size).strip():
                     tire_sizes.append(str(size).strip())
+                    # Brand
+                    if brand_i and str(brand_i).strip():
+                        tire_brands.append(str(brand_i).strip())
+                    elif tire.brand and tire.brand.marka_adi:
+                        tire_brands.append(str(tire.brand.marka_adi).strip())
+                    else:
+                        tire_brands.append("")
+                    # Mevsim
+                    if mevsim_i:
+                        if hasattr(mevsim_i, 'value'):
+                            tire_mevsims.append(str(mevsim_i.value))
+                        else:
+                            tire_mevsims.append(str(mevsim_i))
+                    elif mevsim_display:
+                        tire_mevsims.append(mevsim_display)
+                    else:
+                        tire_mevsims.append("")
             
             # If no tire sizes found in tire1-tire6, use legacy ebat field
             if not tire_sizes and tire.ebat:
                 tire_sizes.append(str(tire.ebat).strip())
+                tire_brands.append(str(tire.brand.marka_adi).strip() if tire.brand else "")
+                tire_mevsims.append(mevsim_display or (tire.mevsim.value if hasattr(tire.mevsim, 'value') else str(tire.mevsim) if tire.mevsim else ""))
             
             # Get rack code
             rack_code = tire.rack.kod if tire.rack else ""
@@ -1117,6 +1140,8 @@ async def lastik_etiketleri(
                 "ebat": tire.ebat,
                 "tire_sizes": tire_sizes,  # List of all tire sizes
                 "tire_sizes_json": json.dumps(tire_sizes) if tire_sizes else "[]",  # JSON string for template
+                "tire_brands": tire_brands,
+                "tire_mevsims": tire_mevsims,
                 "brand": tire.brand.marka_adi if tire.brand else "",
                 "mevsim": mevsim_display,  # Mevsim bilgisi
                 "rack_code": rack_code,
