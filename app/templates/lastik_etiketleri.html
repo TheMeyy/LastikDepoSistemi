@@ -854,7 +854,12 @@ function createDepoLabel(data, tireSize, width, height, seriNo) {
                     <span class="label-field">Lastik Bilgisi:</span>
                     ${tireTableHtml}
                 </div>
-                <div><span class="label-field">Raf Kodu:</span> <span class="label-value">${escapeHtml(data.rackCode)}</span></div>
+                <div>
+                    <span class="label-field">Raf Kodu:</span>
+                    <span class="label-value" style="display:inline-block; font-weight:700; vertical-align:middle;">
+                        ${escapeHtml(data.rackCode)}
+                    </span>
+                </div>
                 <div><span class="label-field">Diş Durumu:</span> <span class="label-value">${escapeHtml(data.disDurumu)}</span></div>
                 <div><span class="label-field">Plaka:</span> <span class="label-value">${escapeHtml(data.customerPlate)}</span></div>
                 <div><span class="label-field">Giriş Tarihi:</span> <span class="label-value">${escapeHtml(data.girisTarihi)}</span></div>
@@ -939,7 +944,12 @@ function createMusteriLabel(data, width, height, seriNo) {
                     <span class="label-field">Lastik Bilgisi:</span>
                     ${tireTableHtml}
                 </div>
-                <div><span class="label-field">Raf Kodu:</span> <span class="label-value">${escapeHtml(data.rackCode)}</span></div>
+                <div>
+                    <span class="label-field">Raf Kodu:</span>
+                    <span class="label-value" style="font-weight:700;">
+                        ${escapeHtml(data.rackCode)}
+                    </span>
+                </div>
                 <div><span class="label-field">Diş Durumu:</span> <span class="label-value">${escapeHtml(data.disDurumu)}</span></div>
                 <div><span class="label-field">Plaka:</span> <span class="label-value">${escapeHtml(data.customerPlate)}</span></div>
                 <div><span class="label-field">Giriş Tarihi:</span> <span class="label-value">${escapeHtml(data.girisTarihi)}</span></div>
@@ -1024,7 +1034,12 @@ function createIsyeriLabel(data, width, height, seriNo) {
                     <span class="label-field">Lastik Bilgisi:</span>
                     ${tireTableHtml}
                 </div>
-                <div><span class="label-field">Raf Kodu:</span> <span class="label-value">${escapeHtml(data.rackCode)}</span></div>
+                <div>
+                    <span class="label-field">Raf Kodu:</span>
+                    <span class="label-value" style="font-weight:700;">
+                        ${escapeHtml(data.rackCode)}
+                    </span>
+                </div>
                 <div><span class="label-field">Diş Durumu:</span> <span class="label-value">${escapeHtml(data.disDurumu)}</span></div>
                 <div><span class="label-field">Plaka:</span> <span class="label-value">${escapeHtml(data.customerPlate)}</span></div>
                 <div><span class="label-field">Giriş Tarihi:</span> <span class="label-value">${escapeHtml(data.girisTarihi)}</span></div>
@@ -1117,7 +1132,7 @@ function generatePDF() {
     const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: 'a4',
+        format: 'a5',
         compress: true
     });
     
@@ -1130,121 +1145,35 @@ function generatePDF() {
 }
 
 function generatePDFWithLogo(doc, data, logoData) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight(); // A5: 148 x 210 mm
+    const pageMargin = 6; // 6mm margin
+    const labelWidth = pageWidth - 2 * pageMargin; // full width inside margins
+    const labelHeight = 65; // slightly shorter to fit 3 labels comfortably
+    const gapY = 3; // reduced vertical spacing
+    const labelsPerPage = 3;
     
-    // Determine number of depot labels based on tire sizes
-    const depotLabelCount = data.tireSizes && data.tireSizes.length > 0 ? data.tireSizes.length : 1;
+    // Build label list: all depot labels, then musteri, then isyeri
+    const labels = [];
+    const depotSizes = data.tireSizes && data.tireSizes.length > 0 ? data.tireSizes : [data.ebat || ''];
+    depotSizes.forEach(sz => {
+        labels.push({ type: 'DEPO ETIKETI', tireSize: sz });
+    });
+    labels.push({ type: 'MUSTERI ETIKETI', tireSize: depotSizes[0] || data.ebat || '' });
+    labels.push({ type: 'ISYERI ETIKETI', tireSize: depotSizes[0] || data.ebat || '' });
     
-    // Dynamic label sizing based on number of labels - slightly smaller to fit all content
-    let labelWidth, labelHeight, margin, pageMargin, cols;
-    if (depotLabelCount <= 4) {
-        // 4 or fewer labels: larger size (2-2-2 düzeni)
-        labelWidth = 88;
-        labelHeight = 68;
-        margin = 8; // 8mm spacing
-        pageMargin = 12;
-        cols = 2; // 2 columns for 4 labels
-    } else if (depotLabelCount === 5) {
-        // 5 labels: medium size (2-2-2-1 düzeni)
-        labelWidth = 85;
-        labelHeight = 66; // Yükseklik telefon numaraları için yeterli
-        margin = 7; // 7mm spacing
-        pageMargin = 10;
-        cols = 2; // 2 columns for 2-2-2-1 layout
-    } else if (depotLabelCount === 6) {
-        // 6 labels: medium size (2-2-2-2 düzeni)
-        labelWidth = 85;
-        labelHeight = 66; // Yükseklik telefon numaraları için yeterli
-        margin = 7; // 7mm spacing
-        pageMargin = 10;
-        cols = 2; // 2 columns for 2-2-2-2 layout
-    } else {
-        // More than 6: smallest size
-        labelWidth = 78;
-        labelHeight = 58;
-        margin = 6;
-        pageMargin = 8;
-        cols = 3;
-    }
-    
+    const seriNo = data.seriNo || '';
     let yPos = pageMargin;
     
-    // Depo Etiketleri (dynamic count) - Layout based on count
-    let rowCount;
-    if (depotLabelCount <= 4) {
-        // 4 labels: 2-2-2 layout (3 rows, 2 cols)
-        rowCount = Math.ceil(depotLabelCount / cols);
-    } else if (depotLabelCount === 5) {
-        // 5 labels: 2-2-2-1 layout (4 rows, 2 cols)
-        rowCount = 4;
-        cols = 2;
-    } else if (depotLabelCount === 6) {
-        // 6 labels: 2-2-2-2 layout (4 rows, 2 cols)
-        rowCount = 4;
-        cols = 2;
-    } else {
-        rowCount = Math.ceil(depotLabelCount / cols);
-    }
-    
-    // Müşterinin seri numarası - tüm etiketlerde aynı
-    const seriNo = data.seriNo || '';
-    
-    for (let row = 0; row < rowCount; row++) {
-        let maxRowHeight = 0;
-        // For 5 labels, last row has only 1 label
-        const colsInThisRow = (depotLabelCount === 5 && row === 3) ? 1 : cols;
-        for (let col = 0; col < colsInThisRow && (row * cols + col) < depotLabelCount; col++) {
-            const xPos = depotLabelCount === 5 && row === 3 
-                ? (210 - labelWidth) / 2  // Center single label in last row for 5 labels
-                : pageMargin + col * (labelWidth + margin);
-            const tireSize = data.tireSizes && data.tireSizes[row * cols + col] ? data.tireSizes[row * cols + col] : (data.ebat || '');
-            // Tüm depo etiketlerinde müşterinin seri numarası gösterilecek
-            drawLabelOnPDF(doc, data, tireSize, xPos, yPos, labelWidth, labelHeight, 'DEPO ETIKETI', logoData, seriNo);
-            maxRowHeight = Math.max(maxRowHeight, labelHeight);
+    labels.forEach((label, idx) => {
+        if (idx > 0 && idx % labelsPerPage === 0) {
+            doc.addPage('a5', 'portrait');
+            yPos = pageMargin;
         }
-        if (row < rowCount - 1) {
-            yPos += maxRowHeight + margin;
-        } else {
-            yPos += maxRowHeight;
-        }
-    }
+        drawLabelOnPDF(doc, data, label.tireSize, pageMargin, yPos, labelWidth, labelHeight, label.type, logoData, seriNo);
+        yPos += labelHeight + gapY;
+    });
     
-    // Musteri ve İşyeri Etiketleri (yan yana, aynı satırda)
-    // Depo etiketlerinden sonra daha az boşluk bırakarak yukarı al
-    let customerYPos = yPos + (margin * 0.3); // Daha yukarı (margin'in %30'u)
-    
-    // A4 sayfa yüksekliği 297mm - sayfa dışına taşmaması için kontrol
-    const pageHeight = 297;
-    const bottomMargin = pageMargin;
-    
-    // Eğer etiketler sayfa dışına taşıyorsa, sadece taşan kısmı kadar yukarı kaydır
-    // Böylece mümkün olduğunca depo etiketlerine yakın kalır ve görüntüdeki gibi hizalı olur
-    if (customerYPos + labelHeight > pageHeight - bottomMargin) {
-        // Taşan miktarı hesapla ve sadece o kadar yukarı kaydır
-        const overflow = (customerYPos + labelHeight) - (pageHeight - bottomMargin);
-        customerYPos = customerYPos - overflow;
-        // Minimum boşluk garantisi: depo etiketlerinden en az margin/4 kadar uzakta olsun (daha esnek)
-        const minYPos = yPos + (margin * 0.25);
-        if (customerYPos < minYPos) {
-            customerYPos = minYPos;
-        }
-    }
-    
-    // Calculate positions for side-by-side labels - depo etiketleriyle tam aynı hizada
-    // Depo etiketlerinin X pozisyonunu kullan (ilk depo etiketi sol tarafta pageMargin'de başlıyor)
-    const depotFirstX = pageMargin; // İlk depo etiketinin X pozisyonu
-    const depotSecondX = depotFirstX + labelWidth + margin; // İkinci depo etiketinin X pozisyonu
-    
-    // Müşteri ve işyeri etiketleri depo etiketleriyle tam aynı X pozisyonunda olmalı
-    const customerXPos = depotFirstX; // Müşteri etiketi sol depo etiketiyle aynı hizada
-    const isyeriXPos = depotSecondX; // İşyeri etiketi sağ depo etiketiyle aynı hizada
-    
-    // Müşteri Etiketi (sol) - depo etiketleriyle tam aynı X pozisyonunda
-    drawLabelOnPDF(doc, data, data.tireSizes[0] || data.ebat || '', customerXPos, customerYPos, labelWidth, labelHeight, 'MUSTERI ETIKETI', logoData, seriNo);
-    
-    // İşyeri Etiketi (sağ, yan yana) - depo etiketleriyle tam aynı hizada
-    drawLabelOnPDF(doc, data, data.tireSizes[0] || data.ebat || '', isyeriXPos, customerYPos, labelWidth, labelHeight, 'ISYERI ETIKETI', logoData, seriNo);
-    
-    // Save PDF
     doc.save(`lastik_etiketleri_${data.customerPlate || 'etiket'}.pdf`);
 }
 
@@ -1321,15 +1250,15 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
         }
     }
     
-    // Title - Positioned below logo (Türkçe karakterler ASCII'ye çevriliyor, orange color) - Daha fazla boşluk bırakıldı
-    // Logo bitişi: y + 3 + 9 = y + 12, başlık başlangıcı: y + 14.5 (2.5mm boşluk)
+    // Title - positioned below logo with safer spacing
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(titleColor[0], titleColor[1], titleColor[2]);
-    doc.text(convertTurkishToASCII('NUSRETLER LASTIK & SIGORTA'), x + width / 2, y + 14.5, { align: 'center' });
+    // Logo is at logoY with height logoHeight; leave ~4mm gap
+    const titleY = (y + 3) + ((width * 0.14) * 0.7) + 4; // logoY + logoHeight + gap
+    doc.text(convertTurkishToASCII('NUSRETLER LASTIK & SIGORTA'), x + width / 2, titleY, { align: 'center' });
     
-    // Label type - Fixed position (Türkçe karakterler ASCII'ye çevriliyor, title case) - Ana başlık ile arasında daha fazla boşluk
-    // Başlık ile alt başlık arasında 2mm boşluk
+    // Label type under title with small gap
     doc.setFontSize(6.2);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(subtitleColor[0], subtitleColor[1], subtitleColor[2]);
@@ -1341,7 +1270,8 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
     } else {
         labelTypeText = 'Musteri Etiketi';
     }
-    doc.text(convertTurkishToASCII(labelTypeText), x + width / 2, y + 18, { align: 'center' });
+    const labelTypeY = titleY + 3.8;
+    doc.text(convertTurkishToASCII(labelTypeText), x + width / 2, labelTypeY, { align: 'center' });
     
     // Content - Fixed Y positions for each line - Biraz daha büyütüldü
     doc.setFontSize(5.2);
@@ -1358,12 +1288,11 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
         return str.length > maxLen ? str.substring(0, maxLen - 3) + '...' : str;
     }
     
-    // Fixed Y positions - each field has its own fixed Y coordinate - Alt boşluğu kullanmak için başlangıç pozisyonu aşağıya kaydırıldı
-    // Etiket başlığı ile içerik arasında daha fazla boşluk bırakıldı
-    let currentY = y + 20;
+    // Content start below subtitle
+    let currentY = labelTypeY + 4.0;
     
     // Adjust spacing based on label height to fit all content - Telefon numaraları için yeterli boşluk bırakıldı
-    const spacing = height < 65 ? 4.0 : 4.5;
+    const spacing = height < 65 ? 3.8 : 4.1;
     
     // Helper function to convert Turkish characters to ASCII for jsPDF compatibility
     // jsPDF'in helvetica font'u Türkçe karakterleri desteklemiyor
@@ -1434,11 +1363,15 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
     });
     currentY = tableY - 0.4;
     
-    // Raf Kodu
+    // Raf Kodu (badge)
     doc.setFont('helvetica', 'bold');
     doc.text('Raf Kodu:', labelX, currentY);
+    const badgeText = String(data.rackCode || '');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.2); // keep normal size, just bold
+    doc.text(badgeText, valueX, currentY, { maxWidth: maxValueWidth });
+    // restore to normal after
     doc.setFont('helvetica', 'normal');
-    doc.text(String(data.rackCode || ''), valueX, currentY, { maxWidth: maxValueWidth });
     currentY += spacing;
     
     // Diş Durumu (Türkçe karakterler ASCII'ye çevriliyor)
@@ -1468,7 +1401,7 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(26, 26, 26); // Koyu siyah (#1a1a1a)
     // Etiket alt kenarından 2mm yukarıda telefon numaraları
-    const phoneY = y + height - 2;
+    const phoneY = y + height - 3.5;
     doc.text('0537 873 74 14  |  0544 644 46 00', x + width / 2, phoneY, { align: 'center' });
 }
 
@@ -1501,82 +1434,42 @@ function printLabels() {
     
     const depotLabelCount = tireSizesArray.length > 0 ? tireSizesArray.length : 1;
     
-    // Dynamic label sizing - same as preview and PDF
-    let labelWidth, labelHeight, labelMargin, cols;
-    if (depotLabelCount <= 4) {
-        labelWidth = '88mm';
-        labelHeight = '68mm';
-        labelMargin = '8mm';
-        cols = 2;
-    } else if (depotLabelCount === 5) {
-        labelWidth = '85mm';
-        labelHeight = '66mm';
-        labelMargin = '7mm';
-        cols = 2; // 2-2-2-1 layout
-    } else if (depotLabelCount === 6) {
-        labelWidth = '85mm';
-        labelHeight = '66mm';
-        labelMargin = '7mm';
-        cols = 2; // 2-2-2-2 layout
-    } else {
-        labelWidth = '78mm';
-        labelHeight = '58mm';
-        labelMargin = '6mm';
-        cols = 3;
-    }
+    // Print layout matches PDF: A5 portrait, 3 labels dikey
+    const pageWidth = '148mm';
+    const labelWidth = '140mm';
+    const labelHeight = '65mm';
+    const labelGap = '3mm';
     
     // Create print window with proper HTML structure
     const printWindow = window.open('', '_blank');
-    
-    // Generate HTML for labels - same as preview
-    let labelsHTML = '<div id="printArea" class="flex flex-col items-center" style="font-family: \'Poppins\', sans-serif; padding: 20px;">';
-    
-    // Depo Etiketleri (dynamic count) - Layout based on count
-    labelsHTML += '<div class="mb-4">';
-    let rowCount;
-    if (depotLabelCount <= 4) {
-        rowCount = Math.ceil(depotLabelCount / cols);
-    } else if (depotLabelCount === 5) {
-        rowCount = 4; // 2-2-2-1 layout
-        cols = 2;
-    } else if (depotLabelCount === 6) {
-        rowCount = 4; // 2-2-2-2 layout
-        cols = 2;
-    } else {
-        rowCount = Math.ceil(depotLabelCount / cols);
-    }
-    
-    labelsHTML += '<div class="grid" style="grid-template-columns: repeat(' + cols + ', 1fr); gap: ' + labelMargin + '; justify-items: center;">';
     
     const labelData = { ...data };
     labelData.tireSizes = tireSizesArray;
     labelData.tireBrands = tireBrandsArray;
     labelData.tireMevsims = tireMevsimsArray;
     
-    // Müşterinin seri numarası - tüm etiketlerde aynı
     const seriNo = data.seriNo || '';
     
-    for (let row = 0; row < rowCount; row++) {
-        const colsInThisRow = (depotLabelCount === 5 && row === 3) ? 1 : cols;
-        for (let col = 0; col < colsInThisRow && (row * cols + col) < depotLabelCount; col++) {
-            const index = row * cols + col;
-            const tireSize = tireSizesArray[index] || data.ebat || '';
-            // Tüm depo etiketlerinde müşterinin seri numarası gösterilecek
-            labelsHTML += createDepoLabel(labelData, tireSize, labelWidth, labelHeight, seriNo);
-        }
+    // Collect all labels in order: all depot labels, then müşteri, then işyeri
+    const allLabels = [];
+    for (let i = 0; i < depotLabelCount; i++) {
+        const tireSize = tireSizesArray[i] || data.ebat || '';
+        allLabels.push(createDepoLabel(labelData, tireSize, labelWidth, labelHeight, seriNo));
     }
+    allLabels.push(createMusteriLabel(data, labelWidth, labelHeight, seriNo));
+    allLabels.push(createIsyeriLabel(data, labelWidth, labelHeight, seriNo));
     
-    labelsHTML += '</div>';
-    labelsHTML += '</div>';
+    // Build HTML: single column, 3 labels per A5 page
+    let labelsHTML = `<div id="printArea" style="font-family: 'Poppins', sans-serif; width: 100%; max-width: ${pageWidth}; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">`;
     
-    // Müşteri ve İşyeri Etiketleri (yan yana)
-    labelsHTML += '<div class="mb-4">';
-    labelsHTML += '<h3 class="text-lg font-semibold text-gray-800 mb-4 text-center no-print">Müşteri ve İşyeri Etiketleri</h3>';
-    labelsHTML += '<div class="flex justify-center gap-8">';
-    labelsHTML += createMusteriLabel(data, labelWidth, labelHeight, seriNo); // Müşteri etiketi için müşterinin seri no'su
-    labelsHTML += createIsyeriLabel(data, labelWidth, labelHeight, seriNo); // İşyeri etiketi için müşterinin seri no'su
-    labelsHTML += '</div>';
-    labelsHTML += '</div>';
+    allLabels.forEach((label, idx) => {
+        const isEndOfPage = ((idx + 1) % 3 === 0) || (idx === allLabels.length - 1);
+        const marginBottom = isEndOfPage ? '0' : labelGap;
+        labelsHTML += `<div class="label-wrapper" style="margin-bottom: ${marginBottom}; page-break-inside: avoid;">${label}</div>`;
+        if ((idx + 1) % 3 === 0 && idx !== allLabels.length - 1) {
+            labelsHTML += `<div class="page-break"></div>`;
+        }
+    });
     
     labelsHTML += '</div>';
     
@@ -1595,18 +1488,25 @@ function printLabels() {
             <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
             <style>
                 @page {
-                    size: A4;
-                    margin: 0;
+                    size: A5 portrait;
+                    margin: 4mm;
                 }
                 body {
                     font-family: 'Poppins', sans-serif;
                     margin: 0;
-                    padding: 15mm;
+                    padding: 0;
                     background: white;
                 }
                 ${cssContent}
                 .no-print {
                     display: none !important;
+                }
+                .label-wrapper {
+                    width: ${labelWidth};
+                    height: ${labelHeight};
+                }
+                .page-break {
+                    page-break-after: always;
                 }
             </style>
         </head>
