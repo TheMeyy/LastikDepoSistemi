@@ -148,9 +148,9 @@
                             </td>
                             <td class="px-6 py-4 text-sm">
                                 {% if item.yeni_lastik_marka_list and item.yeni_lastik_marka_list|length > 0 %}
-                                    <div class="flex flex-col gap-1">
+                                    <div class="flex flex-col gap-5">
                                         {% for marka in item.yeni_lastik_marka_list %}
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded border border-blue-100 bg-blue-50 text-blue-700 text-xs font-semibold">{{ marka or '-' }}</span>
+                                            <span class="inline-flex items-center px-2 py-1.5 rounded border border-blue-100 bg-blue-50 text-blue-700 text-sm font-semibold min-h-[36px]">{{ marka or '-' }}</span>
                                         {% endfor %}
                                     </div>
                                 {% else %}
@@ -159,16 +159,16 @@
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-900">
                                 {% if item.yeni_lastik_mevsim_list and item.yeni_lastik_mevsim_list|length > 0 %}
-                                    <div class="flex flex-col gap-1">
+                                    <div class="flex flex-col gap-5">
                                         {% for mev in item.yeni_lastik_mevsim_list %}
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <span class="inline-flex items-center justify-center px-2 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800 min-h-[36px]">
                                                 {{ mev or '-' }}
                                             </span>
                                         {% endfor %}
                                     </div>
                                 {% else %}
                                     {% if item.yeni_lastik_mevsim %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <span class="inline-flex items-center justify-center px-2 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800 min-h-[36px]">
                                             {{ item.yeni_lastik_mevsim }}
                                         </span>
                                     {% else %}
@@ -200,15 +200,33 @@
                                 {% endif %}
                             </td>
                             <td class="px-6 py-4 text-sm">
-                                <span class="whitespace-nowrap text-sm font-semibold text-blue-600">{{ item.eski_lastik_marka or '-' }}</span>
+                                {% if item.eski_lastik_marka_list and item.eski_lastik_marka_list|length > 0 %}
+                                    <div class="flex flex-col gap-5">
+                                        {% for marka in item.eski_lastik_marka_list %}
+                                            <span class="inline-flex items-center px-2 py-1.5 rounded border border-blue-100 bg-blue-50 text-blue-700 text-sm font-semibold min-h-[36px]">{{ marka or '-' }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="whitespace-nowrap text-sm font-semibold text-blue-600">{{ item.eski_lastik_marka or '-' }}</span>
+                                {% endif %}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-900">
-                                {% if item.eski_lastik_mevsim %}
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        {{ item.eski_lastik_mevsim }}
-                                    </span>
+                                {% if item.eski_lastik_mevsim_list and item.eski_lastik_mevsim_list|length > 0 %}
+                                    <div class="flex flex-col gap-5">
+                                        {% for mev in item.eski_lastik_mevsim_list %}
+                                            <span class="inline-flex items-center justify-center px-2 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800 min-h-[36px]">
+                                                {{ mev or '-' }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
                                 {% else %}
-                                    <span class="text-gray-400">-</span>
+                                    {% if item.eski_lastik_mevsim %}
+                                        <span class="inline-flex items-center justify-center px-2 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800 min-h-[36px]">
+                                            {{ item.eski_lastik_mevsim }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-gray-400">-</span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-500 font-mono">

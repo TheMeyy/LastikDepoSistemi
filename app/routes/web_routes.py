@@ -1384,6 +1384,8 @@ async def musteri_gecmisi(
             yeni_ebat_list = []
             yeni_marka_list = []
             yeni_mevsim_list = []
+            eski_marka_list = []
+            eski_mevsim_list = []
             if item.eski_lastik_ebat:
                 try:
                     eski_ebat_list = json.loads(item.eski_lastik_ebat)
@@ -1442,6 +1444,20 @@ async def musteri_gecmisi(
             except (AttributeError, KeyError):
                 pass
             
+            # Build old brand/mevsim lists to align per tire entry
+            if eski_ebat_list:
+                if item.eski_lastik_marka:
+                    eski_marka_list = [item.eski_lastik_marka] * len(eski_ebat_list)
+                if eski_mevsim:
+                    eski_mevsim_list = [eski_mevsim] * len(eski_ebat_list)
+
+            # Build new brand/mevsim lists fallback if not provided
+            if yeni_ebat_list:
+                if not yeni_marka_list and getattr(item, 'yeni_lastik_marka', None):
+                    yeni_marka_list = [item.yeni_lastik_marka] * len(yeni_ebat_list)
+                if not yeni_mevsim_list and yeni_mevsim:
+                    yeni_mevsim_list = [yeni_mevsim] * len(yeni_ebat_list)
+
             history_items.append({
                 "id": item.id,
                 "musteri_adi": item.musteri_adi,
@@ -1451,7 +1467,9 @@ async def musteri_gecmisi(
                 "islem_tarihi": item.islem_tarihi,
                 "eski_lastik_ebat": eski_ebat_list,
                 "eski_lastik_marka": item.eski_lastik_marka,
+                "eski_lastik_marka_list": eski_marka_list,
                 "eski_lastik_mevsim": eski_mevsim,
+                "eski_lastik_mevsim_list": eski_mevsim_list,
                 "eski_lastik_giris_tarihi": getattr(item, 'eski_lastik_giris_tarihi', None),
                 "eski_seri_no": eski_seri_no,
                 "yeni_lastik_ebat": yeni_ebat_list,
