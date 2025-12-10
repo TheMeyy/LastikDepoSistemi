@@ -18,6 +18,150 @@
             color: #2563eb;
             border-bottom: 2px solid #2563eb;
         }
+
+        /* Dark mode overrides - only when body has .dark-mode */
+        body.dark-mode {
+            background-color: #0f172a;
+            color: #e5e7eb;
+        }
+        body.dark-mode nav {
+            background-color: #0b1220;
+            border-color: #1f2937;
+        }
+        body.dark-mode footer {
+            background-color: #0b1220;
+            border-color: #1f2937;
+            color: #cbd5e1;
+        }
+        body.dark-mode .nav-link {
+            color: #e5e7eb;
+        }
+        body.dark-mode .nav-link.active {
+            color: #93c5fd;
+            border-color: #93c5fd;
+        }
+        body.dark-mode .text-gray-900 { color: #f9fafb !important; }
+        body.dark-mode .text-gray-700 { color: #e5e7eb !important; }
+        body.dark-mode .text-gray-600 { color: #cbd5e1 !important; }
+        body.dark-mode .text-gray-500 { color: #94a3b8 !important; }
+        body.dark-mode .bg-white { background-color: #111827 !important; }
+        body.dark-mode .bg-gray-50 { background-color: #0f172a !important; }
+        body.dark-mode .border-gray-200 { border-color: #1f2937 !important; }
+        body.dark-mode .shadow-sm { box-shadow: none !important; }
+        body.dark-mode table { color: #e5e7eb; }
+        body.dark-mode thead { background-color: #0b1220; }
+        body.dark-mode tbody tr:hover { background-color: #111827; }
+        body.dark-mode input,
+        body.dark-mode select,
+        body.dark-mode textarea {
+            background-color: #111827;
+            border-color: #374151;
+            color: #e5e7eb;
+        }
+        body.dark-mode input::placeholder,
+        body.dark-mode textarea::placeholder {
+            color: #94a3b8;
+        }
+        body.dark-mode .bg-blue-600 {
+            background-color: #2563eb !important;
+            color: #f8fafc !important;
+        }
+        body.dark-mode .hover\:bg-gray-100:hover {
+            background-color: #1f2937 !important;
+        }
+        body.dark-mode .hover\:text-blue-600:hover {
+            color: #93c5fd !important;
+        }
+        body.dark-mode .bg-gray-200 { background-color: #1f2937 !important; }
+        body.dark-mode .bg-gray-100 { background-color: #1f2937 !important; }
+        body.dark-mode .border-gray-300 { border-color: #374151 !important; }
+        /* Dark Mode: Lastik Ara tablosu hover/selection kapalı, header koyu */
+        body.dark-mode .tire-table-row:hover {
+            background-color: inherit !important;
+            color: inherit !important;
+        }
+        body.dark-mode .tire-table-row:hover td,
+        body.dark-mode .tire-table-row:hover span,
+        body.dark-mode .tire-table-row:hover div {
+            color: inherit !important;
+        }
+        body.dark-mode .tire-table-row.selected,
+        body.dark-mode .tire-table-row.selected td,
+        body.dark-mode .tire-table-row.selected span,
+        body.dark-mode .tire-table-row.selected div {
+            background-color: inherit !important;
+            color: inherit !important;
+            box-shadow: none !important;
+        }
+        body.dark-mode .tire-table-row {
+            background-color: #0f172a !important;
+        }
+        body.dark-mode .tire-table-row td {
+            background-color: #0f172a !important;
+        }
+        body.dark-mode .tire-table-header {
+            background-color: #0b1220 !important;
+            border-color: #1f2937 !important;
+        }
+        body.dark-mode .tire-table thead,
+        body.dark-mode .tire-table thead tr {
+            background-color: #0b1220 !important;
+        }
+        body.dark-mode .tire-table thead th {
+            background-color: #0b1220 !important;
+            color: #cbd5e1 !important;
+            border-color: #1f2937 !important;
+        }
+        body.dark-mode .tire-table-container {
+            background-color: #0f172a !important;
+        }
+        body.dark-mode .tire-table {
+            background-color: #0f172a !important;
+        }
+        /* Dark Mode: Lastik Ara - header ve chip renkleri */
+        body.dark-mode .tire-table-header th {
+            color: #cbd5e1 !important;
+            border-color: #1f2937 !important;
+        }
+        body.dark-mode .tire-results-card {
+            background-color: #0b1220 !important;
+            border-color: #1f2937 !important;
+        }
+        body.dark-mode .tire-results-card h2,
+        body.dark-mode .tire-results-card span,
+        body.dark-mode .tire-results-card .text-gray-900,
+        body.dark-mode .tire-results-card .text-gray-500 {
+            color: #e5e7eb !important;
+        }
+        body.dark-mode .brand-chip {
+            background-color: #1f2937 !important;
+            border-color: #334155 !important;
+            color: #e5e7eb !important;
+        }
+        body.dark-mode .season-chip {
+            background-color: #14532d !important;
+            border-color: #166534 !important;
+            color: #ecfdf3 !important;
+        }
+        body.dark-mode .status-chip.status-depoda {
+            background-color: #064e3b !important;
+            border-color: #0f766e !important;
+            color: #ecfdf3 !important;
+        }
+        body.dark-mode .status-chip.status-other {
+            background-color: #1d4ed8 !important;
+            border-color: #1e3a8a !important;
+            color: #e0f2fe !important;
+        }
+        /* Toggle button */
+        #dark-mode-toggle .icon-sun,
+        #dark-mode-toggle .icon-moon {
+            width: 18px;
+            height: 18px;
+        }
+        body.dark-mode #dark-mode-toggle {
+            color: #e5e7eb;
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
@@ -54,6 +198,16 @@
                     <a href="/musteri-gecmisi" class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/musteri-gecmisi' %}active{% endif %}">
                         Müşteri Geçmişi
                     </a>
+                    <!-- Dark mode toggle -->
+                    <button id="dark-mode-toggle" type="button" class="ml-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2" aria-pressed="false" title="Dark Mode">
+                        <span class="hidden sm:inline">Dark</span>
+                        <svg class="icon-sun" data-icon="sun" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M7.05 7.05 5.636 5.636m12.728 0L17.95 7.05M7.05 16.95l-1.414 1.414M12 8a4 4 0 100 8 4 4 0 000-8z"></path>
+                        </svg>
+                        <svg class="icon-moon hidden" data-icon="moon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 0010.02 9.79z"></path>
+                        </svg>
+                    </button>
                 </div>
                 
                 <!-- Right Icons -->
@@ -91,6 +245,43 @@
         </div>
     </footer>
 
+    <script>
+        (function() {
+            const storageKey = 'theme';
+            const body = document.body;
+            const toggleBtn = document.getElementById('dark-mode-toggle');
+
+            function applySavedTheme() {
+                const saved = localStorage.getItem(storageKey);
+                if (saved === 'dark') {
+                    body.classList.add('dark-mode');
+                } else {
+                    body.classList.remove('dark-mode');
+                }
+                updateToggleState();
+            }
+
+            function updateToggleState() {
+                if (!toggleBtn) return;
+                const isDark = body.classList.contains('dark-mode');
+                toggleBtn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+                const sun = toggleBtn.querySelector('[data-icon="sun"]');
+                const moon = toggleBtn.querySelector('[data-icon="moon"]');
+                if (sun) sun.classList.toggle('hidden', isDark);
+                if (moon) moon.classList.toggle('hidden', !isDark);
+            }
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    const isDark = body.classList.toggle('dark-mode');
+                    localStorage.setItem(storageKey, isDark ? 'dark' : 'light');
+                    updateToggleState();
+                });
+            }
+
+            applySavedTheme();
+        })();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

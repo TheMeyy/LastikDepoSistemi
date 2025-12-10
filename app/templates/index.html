@@ -115,7 +115,7 @@
     </div>
     
     <!-- Results Table -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 tire-results-card">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-semibold text-gray-900">Sonuçlar</h2>
             <span class="text-sm text-gray-500">{{ tires|length }} adet bulundu</span>
@@ -143,7 +143,7 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% for tire in tires %}
-                    <tr class="tire-table-row" data-tire-id="{{ tire.id }}" onclick="selectTableRow(this)">
+                    <tr class="tire-table-row" data-tire-id="{{ tire.id }}">
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 font-mono">{{ tire.seri_no or '-' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ tire.customer_name }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ tire.customer_plate }}</td>
@@ -169,7 +169,7 @@
                             {% if tire.tire_brands %}
                                 <div class="flex flex-col gap-5">
                                     {% for brand in tire.tire_brands %}
-                                        <div class="inline-flex items-center gap-1.5 px-2 py-1.5 bg-blue-50 rounded border border-blue-200 text-blue-700 text-sm font-semibold min-h-[36px]">
+                                        <div class="inline-flex items-center gap-1.5 px-2 py-1.5 bg-blue-50 rounded border border-blue-200 text-blue-700 text-sm font-semibold min-h-[36px] brand-chip">
                                             {{ brand or '-' }}
                                         </div>
                                     {% endfor %}
@@ -182,14 +182,14 @@
                             {% if tire.tire_mevsims %}
                                 <div class="flex flex-col gap-5">
                                     {% for mev in tire.tire_mevsims %}
-                                        <span class="inline-flex items-center justify-center px-2 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800 min-h-[36px]">
+                                        <span class="inline-flex items-center justify-center px-2 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800 min-h-[36px] season-chip">
                                             {{ mev or '-' }}
                                         </span>
                                     {% endfor %}
                                 </div>
                             {% else %}
                                 {% if tire.mevsim %}
-                                    <span class="inline-flex items-center justify-center px-2 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800 min-h-[36px]">
+                                    <span class="inline-flex items-center justify-center px-2 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800 min-h-[36px] season-chip">
                                         {{ tire.mevsim }}
                                     </span>
                                 {% else %}
@@ -202,11 +202,11 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tire.cikis_tarihi.strftime('%d.%m.%Y') if tire.cikis_tarihi else '-' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             {% if tire.durum == 'Depoda' %}
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 status-chip status-depoda">
                                 {{ tire.durum }}
                             </span>
                             {% else %}
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 status-chip status-other">
                                 {{ tire.durum }}
                             </span>
                             {% endif %}
@@ -284,18 +284,6 @@
 {% block scripts %}
 <script>
 let currentTireId = null;
-let selectedRow = null;
-
-function selectTableRow(row) {
-    // Remove selected class from all rows
-    document.querySelectorAll('.tire-table-row').forEach(r => {
-        r.classList.remove('selected');
-    });
-    
-    // Add selected class to clicked row
-    row.classList.add('selected');
-    selectedRow = row;
-}
 
 function showExitModal(tireId) {
     currentTireId = tireId;
