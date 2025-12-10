@@ -1032,6 +1032,7 @@ async def lastik_etiketleri(
                 durum_display = "Depoda"
             
             # Collect all tire sizes / brands / mevsims (per tire)
+            mevsim_display = ""  # ensure initialized before use
             tire_sizes = []
             tire_brands = []
             tire_mevsims = []
@@ -1487,7 +1488,7 @@ async def musteri_gecmisi(
                     yeni_marka_list = [item.yeni_lastik_marka] * len(yeni_ebat_list)
                 if not yeni_mevsim_list and yeni_mevsim:
                     yeni_mevsim_list = [yeni_mevsim] * len(yeni_ebat_list)
-
+            
             history_items.append({
                 "id": item.id,
                 "musteri_adi": item.musteri_adi,

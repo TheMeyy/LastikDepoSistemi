@@ -207,7 +207,7 @@
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    <span class="whitespace-nowrap text-sm font-semibold text-blue-600">{{ item.eski_lastik_marka or '-' }}</span>
+                                <span class="whitespace-nowrap text-sm font-semibold text-blue-600">{{ item.eski_lastik_marka or '-' }}</span>
                                 {% endif %}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-900">
@@ -220,12 +220,12 @@
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    {% if item.eski_lastik_mevsim %}
+                                {% if item.eski_lastik_mevsim %}
                                         <span class="inline-flex items-center justify-center px-2 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800 min-h-[36px]">
-                                            {{ item.eski_lastik_mevsim }}
-                                        </span>
-                                    {% else %}
-                                        <span class="text-gray-400">-</span>
+                                        {{ item.eski_lastik_mevsim }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-gray-400">-</span>
                                     {% endif %}
                                 {% endif %}
                             </td>

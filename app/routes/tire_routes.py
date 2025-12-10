@@ -818,7 +818,7 @@ def change_tire(
         def per_tire_mevsim(i: int):
             val = getattr(tire, f"tire{i}_mevsim", None)
             return val or tire.mevsim
-
+        
         new_tire = Tire(
             seri_no=seri_no,
             musteri_id=tire.musteri_id,
