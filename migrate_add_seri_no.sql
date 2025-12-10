@@ -34,3 +34,4 @@ ADD COLUMN IF NOT EXISTS yeni_seri_no INTEGER;
 
 
 
+

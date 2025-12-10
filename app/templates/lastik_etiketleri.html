@@ -278,6 +278,46 @@ console.log('showLabelPreview stub function defined:', typeof window.showLabelPr
         font-weight: 400;
         color: var(--text-gray);
     }
+
+    /* Depo etiketi özel ayarlar - diğer etiketleri etkilemez */
+    .depo-label .label-logo,
+    .depo-label .label-title-main {
+        display: none !important;
+    }
+    .depo-label .label-header {
+        padding-top: 0.5mm;
+        margin-bottom: 1.7mm;
+    }
+    .depo-label .label-title-sub {
+        font-size: 9.4pt;
+        font-weight: 700;
+        color: var(--brand-orange);
+        margin-top: 0;
+    }
+    .depo-label .label-content {
+        font-size: 8.6pt;
+        line-height: 1.34;
+        padding-bottom: 0mm;
+    }
+    .depo-label .label-content div {
+        margin-bottom: 1.45mm;
+    }
+    .depo-label .label-field {
+        width: 24mm;
+        font-size: 8.7pt;
+    }
+    .depo-label .label-value {
+        font-size: 8.4pt;
+    }
+    .depo-label .depo-raf-row .label-field,
+    .depo-label .depo-raf-row .label-value {
+        font-size: 10.2pt;
+        font-weight: 700;
+    }
+    .depo-label .label-content .label-tire-sizes-grid {
+        font-size: 8.3pt;
+        gap: 0.9mm 3.6mm;
+    }
     
     /* Print Styles */
     @media print {
@@ -306,6 +346,10 @@ console.log('showLabelPreview stub function defined:', typeof window.showLabelPr
         .musteri-label .label-content,
         .isyeri-label .label-content {
             padding-bottom: 4mm !important; /* Yazdır için daha fazla alt boşluk */
+        }
+        /* Depo etiketlerinde alt boşluğu azalt */
+        .depo-label .label-content {
+            padding-bottom: 1.2mm !important;
         }
         
         /* Telefon numaraları için özel stil - çerçeve içinde kalması için */
@@ -797,11 +841,11 @@ function createDepoLabel(data, tireSize, width, height, seriNo) {
     }
     const rowCount = Math.max(tireSizesArray.length, tireBrandsArray.length, tireMevsimsArray.length) || (tireSize ? 1 : 0);
     const isTight = rowCount > 4;
-    const tableFont = isTight ? '5pt' : '6pt';
-    const rowGap = isTight ? '0.25mm' : '0.6mm';
-    const colGap = isTight ? '0.7mm' : '1mm';
+    const tableFont = isTight ? '6.3pt' : '7pt';
+    const rowGap = isTight ? '0.35mm' : '0.9mm';
+    const colGap = isTight ? '1mm' : '1.6mm';
     let tireTableHtml = '<div style="display:inline-block; vertical-align:top; margin-left:0;">';
-    tireTableHtml += `<div style="display:grid; grid-template-columns: repeat(3, auto); gap: ${rowGap} ${colGap}; font-size:${tableFont}; line-height:1.1;">`;
+    tireTableHtml += `<div style="display:grid; grid-template-columns: repeat(3, auto); gap: ${rowGap} ${colGap}; font-size:${tableFont}; line-height:1.25;">`;
     tireTableHtml += '<span style="font-weight:700;">Ebat</span><span style="font-weight:700;">Marka</span><span style="font-weight:700;">Mevsim</span>';
     for (let i = 0; i < rowCount; i++) {
         const sizeVal = tireSizesArray[i] || tireSize || '';
@@ -838,8 +882,6 @@ function createDepoLabel(data, tireSize, width, height, seriNo) {
         <div class="depo-label" style="width: ${width}; height: ${height};">
             <div class="label-header">
                 ${seriNoHtml}
-                <img src="/static/images/Nusretler logo-Photoroom.png" alt="Logo" class="label-logo">
-                <div class="label-title-main">NUSRETLER LASTİK & SİGORTA</div>
                 <div class="label-title-sub">Depo Etiketi</div>
             </div>
             <div class="label-content">
@@ -849,16 +891,14 @@ function createDepoLabel(data, tireSize, width, height, seriNo) {
                     <span class="label-field">Lastik Bilgisi:</span>
                     ${tireTableHtml}
                 </div>
-                <div>
+                <div class="depo-raf-row">
                     <span class="label-field">Raf Kodu:</span>
-                    <span class="label-value" style="display:inline-block; font-weight:700; vertical-align:middle;">
+                    <span class="label-value depo-raf-value" style="display:inline-block; font-weight:700; vertical-align:middle;">
                         ${escapeHtml(data.rackCode)}
                     </span>
                 </div>
-                <div><span class="label-field">Diş Durumu:</span> <span class="label-value">${escapeHtml(data.disDurumu)}</span></div>
                 <div><span class="label-field">Plaka:</span> <span class="label-value">${escapeHtml(data.customerPlate)}</span></div>
-                <div><span class="label-field">Giriş Tarihi:</span> <span class="label-value">${escapeHtml(data.girisTarihi)}</span></div>
-                <div class="label-phone-numbers" style="text-align: center; margin-top: auto; padding-top: 0; padding-bottom: 0.4mm; font-size: 6pt; font-weight: 600; color: #1a1a1a; flex-shrink: 0;">0537 873 74 14  |  0544 644 46 00</div>
+                <div style="margin-bottom: 0;"><span class="label-field">Giriş Tarihi:</span> <span class="label-value">${escapeHtml(data.girisTarihi)}</span></div>
             </div>
         </div>
     `;
@@ -1232,47 +1272,61 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
             .replace(/ç/g, 'c');     // Lowercase c with cedilla -> c
     }
     
-    // Logo - Add from base64 data - Önizlemedeki gibi boşluk için pozisyon ayarlandı
-    if (logoData) {
-        try {
-            const logoWidth = width * 0.14; // ~13mm for 90mm width
-            const logoHeight = logoWidth * 0.7; // Maintain aspect ratio (~9mm)
-            const logoX = x + (width - logoWidth) / 2;
-            const logoY = y + 3; // Üstten boşluk
-            doc.addImage(logoData, 'PNG', logoX, logoY, logoWidth, logoHeight);
-        } catch (e) {
-            console.warn('Logo eklenemedi:', e);
+    // Header & label type
+    let currentY;
+    if (!isDepo) {
+        // Logo - Add from base64 data - Önizlemedeki gibi boşluk için pozisyon ayarlandı
+        if (logoData) {
+            try {
+                const logoWidth = width * 0.14; // ~13mm for 90mm width
+                const logoHeight = logoWidth * 0.7; // Maintain aspect ratio (~9mm)
+                const logoX = x + (width - logoWidth) / 2;
+                const logoY = y + 3; // Üstten boşluk
+                doc.addImage(logoData, 'PNG', logoX, logoY, logoWidth, logoHeight);
+            } catch (e) {
+                console.warn('Logo eklenemedi:', e);
+            }
         }
-    }
-    
-    // Title - positioned below logo with safer spacing
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(titleColor[0], titleColor[1], titleColor[2]);
-    // Logo is at logoY with height logoHeight; leave ~4mm gap
-    const titleY = (y + 3) + ((width * 0.14) * 0.7) + 4; // logoY + logoHeight + gap
-    doc.text(convertTurkishToASCII('NUSRETLER LASTIK & SIGORTA'), x + width / 2, titleY, { align: 'center' });
-    
-    // Label type under title with small gap
-    doc.setFontSize(6.2);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(subtitleColor[0], subtitleColor[1], subtitleColor[2]);
-    let labelTypeText = '';
-    if (labelType.includes('DEPO')) {
-        labelTypeText = 'Depo Etiketi';
-    } else if (labelType.includes('ISYERI')) {
-        labelTypeText = 'Isyeri Etiketi';
+        
+        // Title - positioned below logo with safer spacing
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(titleColor[0], titleColor[1], titleColor[2]);
+        // Logo is at logoY with height logoHeight; leave ~4mm gap
+        const titleY = (y + 3) + ((width * 0.14) * 0.7) + 4; // logoY + logoHeight + gap
+        doc.text(convertTurkishToASCII('NUSRETLER LASTIK & SIGORTA'), x + width / 2, titleY, { align: 'center' });
+        
+        // Label type under title with small gap
+        doc.setFontSize(6.2);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(subtitleColor[0], subtitleColor[1], subtitleColor[2]);
+        let labelTypeText = '';
+        if (labelType.includes('DEPO')) {
+            labelTypeText = 'Depo Etiketi';
+        } else if (labelType.includes('ISYERI')) {
+            labelTypeText = 'Isyeri Etiketi';
+        } else {
+            labelTypeText = 'Musteri Etiketi';
+        }
+        const labelTypeY = titleY + 3.8;
+        doc.text(convertTurkishToASCII(labelTypeText), x + width / 2, labelTypeY, { align: 'center' });
+        currentY = labelTypeY + 4.0;
     } else {
-        labelTypeText = 'Musteri Etiketi';
+        // Depo etiketi: logo/marka yok, tip metni yukarıda
+        doc.setFontSize(8.8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(titleColor[0], titleColor[1], titleColor[2]);
+        const labelTypeY = y + 5.8;
+        doc.text(convertTurkishToASCII('Depo Etiketi'), x + width / 2, labelTypeY, { align: 'center' });
+        currentY = labelTypeY + 5.2;
     }
-    const labelTypeY = titleY + 3.8;
-    doc.text(convertTurkishToASCII(labelTypeText), x + width / 2, labelTypeY, { align: 'center' });
     
-    // Content - Fixed Y positions for each line - Biraz daha büyütüldü
-    doc.setFontSize(5.2);
-    const labelX = x + 1.8;
-    const valueX = x + 16;
-    const maxValueWidth = width - valueX - 1.8;
+    // Content sizing
+    const baseFontSize = isDepo ? 8.3 : 5.2;
+    doc.setFontSize(baseFontSize);
+    const labelX = isDepo ? x + 2.0 : x + 1.8;
+    const valueX = isDepo ? x + 21.5 : x + 16;
+    const maxValueWidth = width - valueX - 2;
     
     // Reset text color to dark gray
     doc.setTextColor(textColor[0], textColor[1], textColor[2]);
@@ -1283,25 +1337,8 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
         return str.length > maxLen ? str.substring(0, maxLen - 3) + '...' : str;
     }
     
-    // Content start below subtitle
-    let currentY = labelTypeY + 4.0;
-    
     // Adjust spacing based on label height to fit all content - Telefon numaraları için yeterli boşluk bırakıldı
-    const spacing = height < 65 ? 3.8 : 4.1;
-    
-    // Helper function to convert Turkish characters to ASCII for jsPDF compatibility
-    // jsPDF'in helvetica font'u Türkçe karakterleri desteklemiyor
-    // Bu yüzden Türkçe karakterleri ASCII'ye çeviriyoruz
-    function convertTurkishToASCII(text) {
-        if (!text) return '';
-        return String(text)
-            .replace(/İ/g, 'I').replace(/ı/g, 'i')
-            .replace(/Ş/g, 'S').replace(/ş/g, 's')
-            .replace(/Ğ/g, 'G').replace(/ğ/g, 'g')
-            .replace(/Ü/g, 'U').replace(/ü/g, 'u')
-            .replace(/Ö/g, 'O').replace(/ö/g, 'o')
-            .replace(/Ç/g, 'C').replace(/ç/g, 'c');
-    }
+    const spacing = isDepo ? 5.3 : (height < 65 ? 3.8 : 4.1);
     
     // İsim (Türkçe karakterler ASCII'ye çevriliyor)
     doc.setFont('helvetica', 'bold');
@@ -1340,41 +1377,47 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
     // Header
     let tableY = currentY;
     const col1X = valueX;
-    const col2X = valueX + 18;
-    const col3X = valueX + 35;
+    const col2X = valueX + (isDepo ? 25.5 : 18);
+    const col3X = valueX + (isDepo ? 46.5 : 35);
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(isDepo ? 8.4 : baseFontSize);
     doc.text('Ebat', col1X, tableY);
     doc.text('Marka', col2X, tableY);
     doc.text('Mevsim', col3X, tableY);
-    const rowSpacing = tight ? 2.3 : 3.2;
+    const rowSpacing = tight ? (isDepo ? 3.45 : 2.3) : (isDepo ? 4.4 : 3.2);
     tableY += rowSpacing;
     doc.setFont('helvetica', 'normal');
-    if (tight) doc.setFontSize(4.8);
+    doc.setFontSize(isDepo ? (tight ? 7.4 : 7.9) : (tight ? 4.8 : baseFontSize));
     rows.forEach(r => {
-        doc.text(convertTurkishToASCII(String(r.ebat || '-')), col1X, tableY, { maxWidth: 16 });
-        doc.text(convertTurkishToASCII(String(r.marka || '-')), col2X, tableY, { maxWidth: 15 });
-        doc.text(convertTurkishToASCII(String(r.mevsim || '-')), col3X, tableY, { maxWidth: 15 });
+        doc.text(convertTurkishToASCII(String(r.ebat || '-')), col1X, tableY, { maxWidth: isDepo ? 24 : 16 });
+        doc.text(convertTurkishToASCII(String(r.marka || '-')), col2X, tableY, { maxWidth: isDepo ? 21 : 15 });
+        doc.text(convertTurkishToASCII(String(r.mevsim || '-')), col3X, tableY, { maxWidth: isDepo ? 21 : 15 });
         tableY += rowSpacing;
     });
+    doc.setFontSize(baseFontSize);
     currentY = tableY - 0.4;
     
     // Raf Kodu (badge)
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(isDepo ? 9.4 : baseFontSize);
     doc.text('Raf Kodu:', labelX, currentY);
     const badgeText = String(data.rackCode || '');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(5.2); // keep normal size, just bold
+    doc.setFontSize(isDepo ? 10.4 : 5.2); // Depo için daha büyük
     doc.text(badgeText, valueX, currentY, { maxWidth: maxValueWidth });
     // restore to normal after
     doc.setFont('helvetica', 'normal');
+    doc.setFontSize(baseFontSize);
     currentY += spacing;
     
-    // Diş Durumu (Türkçe karakterler ASCII'ye çevriliyor)
-    doc.setFont('helvetica', 'bold');
-    doc.text('Dis Durumu:', labelX, currentY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(truncate(convertTurkishToASCII(data.disDurumu || ''), 22), valueX, currentY, { maxWidth: maxValueWidth });
-    currentY += spacing;
+    if (!isDepo) {
+        // Diş Durumu (Türkçe karakterler ASCII'ye çevriliyor)
+        doc.setFont('helvetica', 'bold');
+        doc.text('Dis Durumu:', labelX, currentY);
+        doc.setFont('helvetica', 'normal');
+        doc.text(truncate(convertTurkishToASCII(data.disDurumu || ''), 22), valueX, currentY, { maxWidth: maxValueWidth });
+        currentY += spacing;
+    }
     
     // Plaka
     doc.setFont('helvetica', 'bold');
@@ -1390,14 +1433,16 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
     doc.text(String(data.girisTarihi || ''), valueX, currentY, { maxWidth: maxValueWidth });
     currentY += spacing;
     
-    // Firma Telefon Numaraları (en altta, ortalanmış) - Büyük ve koyu vurgulu
-    // Etiket yüksekliği içinde kalması için pozisyon ayarlandı
-    doc.setFontSize(tight ? 5.0 : 5.5);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(26, 26, 26); // Koyu siyah (#1a1a1a)
-    // Etiket alt kenarından 2mm yukarıda telefon numaraları
-    const phoneY = y + height - 3.5;
-    doc.text('0537 873 74 14  |  0544 644 46 00', x + width / 2, phoneY, { align: 'center' });
+    if (!isDepo) {
+        // Firma Telefon Numaraları (en altta, ortalanmış) - Büyük ve koyu vurgulu
+        // Etiket yüksekliği içinde kalması için pozisyon ayarlandı
+        doc.setFontSize(tight ? 5.0 : 5.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(26, 26, 26); // Koyu siyah (#1a1a1a)
+        // Etiket alt kenarından 2mm yukarıda telefon numaraları
+        const phoneY = y + height - 3.5;
+        doc.text('0537 873 74 14  |  0544 644 46 00', x + width / 2, phoneY, { align: 'center' });
+    }
 }
 
 function printLabels() {
