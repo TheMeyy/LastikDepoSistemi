@@ -152,21 +152,66 @@ console.log('showLabelPreview stub function defined:', typeof window.showLabelPr
         font-family: 'Poppins', sans-serif;
     }
     
-    /* Depo Etiketi Stili */
-    .depo-label {
-        width: 95mm;
-        height: 80mm;
-        background: var(--bg-depo-gray);
-        border: 1.5px solid var(--brand-orange);
-        border-radius: 8px;
-        padding: 4mm;
-        box-sizing: border-box;
-        box-shadow: 0 0 6px rgba(0,0,0,0.05);
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        overflow: visible;
-    }
+    /* =========================
+   YENİ DEPO ETİKETİ TASARIMI
+   ========================= */
+
+.depo-label {
+    width: 95mm;
+    height: 63mm;
+    padding: 4mm;
+    box-sizing: border-box;
+    border: 1.5px solid #F26B1D;
+    border-radius: 8px;
+    background: #F9F9F9;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+}
+
+/* ÜST SATIR: RAF | PLAKA | SERİ */
+.depo-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 800;
+    font-size: 18pt;
+    color: #111;
+    line-height: 1;
+}
+
+/* ALT ALAN */
+.depo-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3mm;
+}
+
+/* MÜŞTERİ ADI */
+.depo-customer {
+    font-size: 11.5pt;
+    font-weight: 700;
+    color: #111;
+}
+
+/* EBAT | MARKA TABLOSU */
+.depo-table {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.8mm 4mm;
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #111;
+}
+
+/* GİRİŞ TARİHİ */
+.depo-date {
+    font-size: 9.5pt;
+    font-weight: 600;
+    color: #333;
+}
+
     
     /* Müşteri Etiketi Stili */
     .musteri-label {
@@ -279,45 +324,7 @@ console.log('showLabelPreview stub function defined:', typeof window.showLabelPr
         color: var(--text-gray);
     }
 
-    /* Depo etiketi özel ayarlar - diğer etiketleri etkilemez */
-    .depo-label .label-logo,
-    .depo-label .label-title-main {
-        display: none !important;
-    }
-    .depo-label .label-header {
-        padding-top: 0.5mm;
-        margin-bottom: 1.7mm;
-    }
-    .depo-label .label-title-sub {
-        font-size: 9.4pt;
-        font-weight: 700;
-        color: var(--brand-orange);
-        margin-top: 0;
-    }
-    .depo-label .label-content {
-        font-size: 8.6pt;
-        line-height: 1.34;
-        padding-bottom: 0mm;
-    }
-    .depo-label .label-content div {
-        margin-bottom: 1.45mm;
-    }
-    .depo-label .label-field {
-        width: 24mm;
-        font-size: 8.7pt;
-    }
-    .depo-label .label-value {
-        font-size: 8.4pt;
-    }
-    .depo-label .depo-raf-row .label-field,
-    .depo-label .depo-raf-row .label-value {
-        font-size: 10.2pt;
-        font-weight: 700;
-    }
-    .depo-label .label-content .label-tire-sizes-grid {
-        font-size: 8.3pt;
-        gap: 0.9mm 3.6mm;
-    }
+   
     
     /* Print Styles */
     @media print {
@@ -517,9 +524,7 @@ console.log('showLabelPreview stub function defined:', typeof window.showLabelPr
             <button onclick="generatePDF()" class="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
                 PDF Oluştur
             </button>
-            <button onclick="printLabels()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
-                Yazdır
-            </button>
+            
             <button onclick="hideLabelPreview()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
                 Kapat
             </button>
@@ -790,7 +795,8 @@ function generateLabels() {
                 const index = row * cols + col;
                 const tireSize = tireSizesArray[index] || data.ebat || '';
                 // Tüm depo etiketlerinde müşterinin seri numarası gösterilecek
-                html += createDepoLabel(labelData, tireSize, labelWidth, labelHeight, seriNo);
+                html += createDepoLabel(labelData, labelWidth, labelHeight, seriNo);
+
             }
         }
         
@@ -819,90 +825,82 @@ function updateLabels() {
     generateLabels();
 }
 
-function createDepoLabel(data, tireSize, width, height, seriNo) {
-    // Prepare per-tire rows (ebat / marka / mevsim)
-    let tireSizesArray = [];
-    let tireBrandsArray = [];
-    let tireMevsimsArray = [];
-    if (data.tireSizes) {
-        if (Array.isArray(data.tireSizes)) {
-            tireSizesArray = data.tireSizes.filter(size => size && String(size).trim() !== '');
-        } else if (typeof data.tireSizes === 'string') {
-            try { tireSizesArray = JSON.parse(data.tireSizes).filter(size => size && String(size).trim() !== ''); } catch (e) { tireSizesArray = [data.tireSizes]; }
-        }
+function createDepoLabel(data, width, height, seriNo) {
+
+    /* =========================
+       VERI HAZIRLIGI
+       ========================= */
+
+    const raf   = String(data.rackCode || '').trim();
+    const plaka = String(data.customerPlate || '').trim();
+    const seri  = String(seriNo || '').trim();
+
+    const customerName = String(data.customerName || '').trim();
+    const girisTarihi  = String(data.girisTarihi || '').trim();
+
+    let sizes  = [];
+    let brands = [];
+
+    if (Array.isArray(data.tireSizes)) {
+        sizes = data.tireSizes.filter(s => s && String(s).trim() !== '');
     }
-    if (data.tireBrands) {
-        if (Array.isArray(data.tireBrands)) tireBrandsArray = data.tireBrands;
-        else if (typeof data.tireBrands === 'string') { try { tireBrandsArray = JSON.parse(data.tireBrands); } catch (e) {} }
+
+    if (Array.isArray(data.tireBrands)) {
+        brands = data.tireBrands;
     }
-    if (data.tireMevsims) {
-        if (Array.isArray(data.tireMevsims)) tireMevsimsArray = data.tireMevsims;
-        else if (typeof data.tireMevsims === 'string') { try { tireMevsimsArray = JSON.parse(data.tireMevsims); } catch (e) {} }
+
+    // 4 lastik hedefi (fazlası için sonra konuşacağız)
+    const maxRows = Math.min(4, Math.max(sizes.length, 1));
+
+    const rows = [];
+    for (let i = 0; i < maxRows; i++) {
+        rows.push({
+            size: sizes[i] || '-',
+            brand: brands[i] || '-'
+        });
     }
-    const rowCount = Math.max(tireSizesArray.length, tireBrandsArray.length, tireMevsimsArray.length) || (tireSize ? 1 : 0);
-    const isTight = rowCount > 4;
-    const tableFont = isTight ? '6.3pt' : '7pt';
-    const rowGap = isTight ? '0.35mm' : '0.9mm';
-    const colGap = isTight ? '1mm' : '1.6mm';
-    let tireTableHtml = '<div style="display:inline-block; vertical-align:top; margin-left:0;">';
-    tireTableHtml += `<div style="display:grid; grid-template-columns: repeat(3, auto); gap: ${rowGap} ${colGap}; font-size:${tableFont}; line-height:1.25;">`;
-    tireTableHtml += '<span style="font-weight:700;">Ebat</span><span style="font-weight:700;">Marka</span><span style="font-weight:700;">Mevsim</span>';
-    for (let i = 0; i < rowCount; i++) {
-        const sizeVal = tireSizesArray[i] || tireSize || '';
-        const brandVal = tireBrandsArray[i] || data.brand || '';
-        const mevVal = tireMevsimsArray[i] || data.mevsim || '';
-        tireTableHtml += `<span>${escapeHtml(String(sizeVal || '-'))}</span><span>${escapeHtml(String(brandVal || '-'))}</span><span>${escapeHtml(String(mevVal || '-'))}</span>`;
-    }
-    if (rowCount === 0) {
-        tireTableHtml += `<span>${escapeHtml(String(tireSize || '-'))}</span><span>${escapeHtml(String(data.brand || '-'))}</span><span>${escapeHtml(String(data.mevsim || '-'))}</span>`;
-    }
-    tireTableHtml += '</div></div>';
-    
-    // Seri numarası için dinamik font boyutu - uzun numaralar için sola doğru büyüsün
-    // Seri no boşsa veya sadece boşluk içeriyorsa gösterme
-    const seriNoStr = String(seriNo || '').trim();
-    let seriNoHtml = '';
-    if (seriNoStr && seriNoStr !== '') {
-        const seriNoLength = seriNoStr.length;
-        let seriNoFontSize = '8pt';
-        let seriNoRight = '0';
-        // 4-5 haneli seri numaraları için font boyutunu küçült ve sağdan boşluğu artır
-        if (seriNoLength >= 4) {
-            seriNoFontSize = '7pt';
-            seriNoRight = '1mm';
-        }
-        if (seriNoLength >= 5) {
-            seriNoFontSize = '6.5pt';
-            seriNoRight = '2mm';
-        }
-        seriNoHtml = `<div class="label-seri-no" style="font-size: ${seriNoFontSize}; right: ${seriNoRight};">${escapeHtml(seriNoStr)}</div>`;
-    }
-    
+
+    /* =========================
+       HTML
+       ========================= */
+
     return `
-        <div class="depo-label" style="width: ${width}; height: ${height};">
-            <div class="label-header">
-                ${seriNoHtml}
-                <div class="label-title-sub">Depo Etiketi</div>
+        <div class="depo-label" style="width:${width}; height:${height};">
+
+            <!-- UST SATIR -->
+            <div class="depo-top">
+                <div>${escapeHtml(raf)}</div>
+                <div style="flex:1; text-align:center;">${escapeHtml(plaka)}</div>
+                <div style="text-align:right;">${escapeHtml(seri)}</div>
             </div>
-            <div class="label-content">
-                <div><span class="label-field">İsim:</span> <span class="label-value">${escapeHtml(data.customerName)}</span></div>
-                <div><span class="label-field">Telefon:</span> <span class="label-value">${escapeHtml(data.customerPhone)}</span></div>
-                <div style="margin-bottom: 2mm;">
-                    <span class="label-field">Lastik Bilgisi:</span>
-                    ${tireTableHtml}
+
+            <!-- GOVDE -->
+            <div class="depo-body">
+
+                <div class="depo-customer">
+                    ${escapeHtml(customerName)}
                 </div>
-                <div class="depo-raf-row">
-                    <span class="label-field">Raf Kodu:</span>
-                    <span class="label-value depo-raf-value" style="display:inline-block; font-weight:700; vertical-align:middle;">
-                        ${escapeHtml(data.rackCode)}
-                    </span>
+
+                <div class="depo-table">
+                    <div>EBAT</div>
+                    <div>MARKA</div>
+
+                    ${rows.map(r => `
+                        <div>${escapeHtml(r.size)}</div>
+                        <div>${escapeHtml(r.brand)}</div>
+                    `).join('')}
                 </div>
-                <div><span class="label-field">Plaka:</span> <span class="label-value">${escapeHtml(data.customerPlate)}</span></div>
-                <div style="margin-bottom: 0;"><span class="label-field">Giriş Tarihi:</span> <span class="label-value">${escapeHtml(data.girisTarihi)}</span></div>
+
+                <div class="depo-date">
+                    ${escapeHtml(girisTarihi)}
+                </div>
+
             </div>
         </div>
     `;
 }
+
+
 
 function createMusteriLabel(data, width, height, seriNo) {
     // Prepare per-tire rows (ebat / marka / mevsim)
@@ -1161,59 +1159,218 @@ function loadLogoAsBase64(callback) {
     };
     logoImg.src = '/static/images/Nusretler logo-Photoroom.png';
 }
-
 function generatePDF() {
     const { jsPDF } = window.jspdf;
+
+    // ÖZEL SAYFA: 105 x 210 mm
     const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: 'a5',
+        format: [105, 210],
         compress: true
     });
-    
+
     const data = getLabelData();
-    
-    // Load logo first, then generate PDF
+
+    // Logo depo etiketinde kullanılmayacak ama mevcut akışa dokunmuyoruz
     loadLogoAsBase64(function(logoData) {
         generatePDFWithLogo(doc, data, logoData);
     });
 }
-
 function generatePDFWithLogo(doc, data, logoData) {
+    // Sayfa ölçüsü (105 x 210)
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight(); // A5: 148 x 210 mm
-    const pageMargin = 6; // 6mm margin
-    const labelWidth = pageWidth - 2 * pageMargin; // full width inside margins
-    const labelHeight = 65; // slightly shorter to fit 3 labels comfortably
-    const gapY = 3; // reduced vertical spacing
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Boşluklar
+    const pageMargin = 5;
+    const gapY = 5;
+
+    // 1 sayfada 3 depo etiketi
     const labelsPerPage = 3;
-    
-    // Build label list: all depot labels, then musteri, then isyeri
-    const labels = [];
-    const depotSizes = data.tireSizes && data.tireSizes.length > 0 ? data.tireSizes : [data.ebat || ''];
-    depotSizes.forEach(sz => {
-        labels.push({ type: 'DEPO ETIKETI', tireSize: sz });
-    });
-    labels.push({ type: 'MUSTERI ETIKETI', tireSize: depotSizes[0] || data.ebat || '' });
-    labels.push({ type: 'ISYERI ETIKETI', tireSize: depotSizes[0] || data.ebat || '' });
-    
+
+    // Etiket boyutu
+    const labelWidth = pageWidth - 2 * pageMargin;
+    const usableHeight = pageHeight - 2 * pageMargin - (gapY * (labelsPerPage - 1));
+    const labelHeight = usableHeight / labelsPerPage;
+
+    const depotSizes = (data.tireSizes && data.tireSizes.length > 0)
+        ? data.tireSizes
+        : [data.ebat || ''];
+
     const seriNo = data.seriNo || '';
+
     let yPos = pageMargin;
-    
-    labels.forEach((label, idx) => {
-        if (idx > 0 && idx % labelsPerPage === 0) {
-            doc.addPage('a5', 'portrait');
+    let labelsOnCurrentPage = 0;
+
+    /* =========================
+       DEPO ETİKETLERİ
+       ========================= */
+    depotSizes.forEach((sz, idx) => {
+        if (labelsOnCurrentPage === labelsPerPage) {
+            doc.addPage([105, 210], 'portrait');
             yPos = pageMargin;
+            labelsOnCurrentPage = 0;
         }
-        drawLabelOnPDF(doc, data, label.tireSize, pageMargin, yPos, labelWidth, labelHeight, label.type, logoData, seriNo);
+
+        drawLabelOnPDF(
+            doc,
+            data,
+            sz,
+            pageMargin,
+            yPos,
+            labelWidth,
+            labelHeight,
+            'DEPO ETIKETI',
+            logoData,
+            seriNo
+        );
+
         yPos += labelHeight + gapY;
+        labelsOnCurrentPage++;
     });
-    
-    doc.save(`lastik_etiketleri_${data.customerPlate || 'etiket'}.pdf`);
+
+    /* =========================
+       MÜŞTERİ + İŞYERİ ETİKETLERİ
+       (AYNI SAYFADA, ALT ALTA)
+       ========================= */
+
+    // Eğer sayfada yer yoksa yeni sayfa aç
+    if (yPos + (labelHeight * 2) + gapY > pageHeight - pageMargin) {
+        doc.addPage([105, 210], 'portrait');
+        yPos = pageMargin;
+    }
+
+    // Müşteri etiketi
+    drawLabelOnPDF(
+        doc,
+        data,
+        null,
+        pageMargin,
+        yPos,
+        labelWidth,
+        labelHeight,
+        'MUSTERI ETIKETI',
+        logoData,
+        seriNo
+    );
+
+    yPos += labelHeight + gapY;
+
+    // İşyeri etiketi
+    drawLabelOnPDF(
+        doc,
+        data,
+        null,
+        pageMargin,
+        yPos,
+        labelWidth,
+        labelHeight,
+        'ISYERI ETIKETI',
+        logoData,
+        seriNo
+    );
+
+    /* =========================
+       PDF KAYDET
+       ========================= */
+    doc.save(`depo_etiketleri_${data.customerPlate || 'etiket'}.pdf`);
 }
+
 
 function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, logoData, seriNo) {
     const isDepo = labelType.includes('DEPO');
+        // =========================
+    // DEPO ETIKETI (YENI TASARIM)
+    // =========================
+    if (isDepo) {
+        // Arka plan + çerçeve
+        const bgColor = [249, 249, 249];
+        const borderColor = [242, 107, 29];
+
+        doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
+        doc.roundedRect(x, y, width, height, 3, 3, 'F');
+
+        doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+        doc.setLineWidth(0.53);
+        doc.roundedRect(x, y, width, height, 3, 3);
+
+       
+
+        // İç boşluklar
+        const padX = 4;
+        const padTop = 6;
+        const padBottom = 6;
+
+        // ÜST SATIR: RAF | PLAKA | SERI
+        const raf = String(data.rackCode || '');
+        const plaka = String(data.customerPlate || '');
+        const seri = String(seriNo || '');
+
+        doc.setTextColor(17, 17, 17);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+
+        const topY = y + padTop;
+
+        // Sol: RAF
+        doc.text(convertTurkishToASCII(raf), x + padX, topY, { align: 'left' });
+
+        // Orta: PLAKA
+        doc.text(convertTurkishToASCII(plaka), x + width / 2, topY, { align: 'center' });
+
+        // Sağ: SERI
+        doc.text(convertTurkishToASCII(seri), x + width - padX, topY, { align: 'right' });
+
+        // Müşteri adı
+        let currentY = topY + 10;
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text(convertTurkishToASCII(String(data.customerName || '')), x + padX, currentY, { align: 'left' });
+
+        // Tablo (EBAT | MARKA) — 4 satır hedefi
+        currentY += 9;
+
+        const sizes = Array.isArray(data.tireSizes) ? data.tireSizes : [];
+        const brands = Array.isArray(data.tireBrands) ? data.tireBrands : [];
+
+        // 4 satır hedef: (6 satır gelirse sonra ayrı sayfa planlarız)
+        const maxRows = sizes.length > 0 ? Math.min(4, sizes.length) : 1;
+
+
+        // Kolon X’ler
+        const col1X = x + padX;
+        const col2X = x + (width / 2) + 2;
+
+        // Başlık
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('EBAT', col1X, currentY);
+        doc.text('MARKA', col2X, currentY);
+
+        // Satırlar
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.6);
+
+        const rowGap = 6.2;
+        for (let i = 0; i < maxRows; i++) {
+            const ebatVal = (sizes[i] || tireSize || data.ebat || '');
+            const markaVal = (brands[i] || data.brand || '');
+
+            const rowY = currentY + rowGap * (i + 1);
+            doc.text(convertTurkishToASCII(String(ebatVal)), col1X, rowY, { maxWidth: (width / 2) - 6 });
+            doc.text(convertTurkishToASCII(String(markaVal)), col2X, rowY, { maxWidth: (width / 2) - 6 });
+        }
+
+        // Giriş tarihi en altta
+        const dateY = y + height - padBottom;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(convertTurkishToASCII(String(data.girisTarihi || '')), x + padX, dateY, { align: 'left' });
+
+        return; // depo etiketinde burada bitiriyoruz
+    }
+
     const bgColor = isDepo ? [249, 249, 249] : [255, 255, 255]; // #F9F9F9 for depo, white for musteri
     const borderColor = [242, 107, 29]; // #F26B1D orange
     const titleColor = [242, 107, 29]; // #F26B1D orange
@@ -1444,92 +1601,86 @@ function drawLabelOnPDF(doc, data, tireSize, x, y, width, height, labelType, log
         doc.text('0537 873 74 14  |  0544 644 46 00', x + width / 2, phoneY, { align: 'center' });
     }
 }
-
 function printLabels() {
     const data = getLabelData();
-    
-    // Ensure tireSizes/brands/mevsims is an array
+
+    // tireSizes / brands array güvenliği
     let tireSizesArray = [];
     let tireBrandsArray = [];
-    let tireMevsimsArray = [];
     if (data.tireSizes) {
         if (Array.isArray(data.tireSizes)) {
-            tireSizesArray = data.tireSizes.filter(size => size && String(size).trim() !== '');
+            tireSizesArray = data.tireSizes.filter(s => s && String(s).trim() !== '');
         } else if (typeof data.tireSizes === 'string') {
-            try {
-                tireSizesArray = JSON.parse(data.tireSizes).filter(size => size && String(size).trim() !== '');
-            } catch (e) {
-                tireSizesArray = [data.tireSizes].filter(size => size && String(size).trim() !== '');
-            }
+            try { tireSizesArray = JSON.parse(data.tireSizes).filter(s => s && String(s).trim() !== ''); }
+            catch (e) { tireSizesArray = [data.tireSizes].filter(s => s && String(s).trim() !== ''); }
         }
     }
     if (data.tireBrands) {
         if (Array.isArray(data.tireBrands)) tireBrandsArray = data.tireBrands;
         else if (typeof data.tireBrands === 'string') { try { tireBrandsArray = JSON.parse(data.tireBrands); } catch (e) {} }
     }
-    if (data.tireMevsims) {
-        if (Array.isArray(data.tireMevsims)) tireMevsimsArray = data.tireMevsims;
-        else if (typeof data.tireMevsims === 'string') { try { tireMevsimsArray = JSON.parse(data.tireMevsims); } catch (e) {} }
-    }
-    
+
     const depotLabelCount = tireSizesArray.length > 0 ? tireSizesArray.length : 1;
-    
-    // Print layout matches PDF: A5 portrait, 3 labels dikey
-    const pageWidth = '148mm';
-    const labelWidth = '140mm';
-    const labelHeight = '65mm';
-    const labelGap = '3mm';
-    
-    // Create print window with proper HTML structure
+
+    // SAYFA: 105 x 210 mm
+    const pageW = '105mm';
+    const pageH = '210mm';
+
+    // Boşluklar
+    const pageMargin = 5; // mm
+    const gap = 5;        // mm
+
+    // Etiket boyutu: 3 adet sığacak şekilde
+    // Yükseklik = (210 - (2*margin) - (2*gap)) / 3 ≈ 63.3mm
+    const labelWidth = `calc(${pageW} - ${pageMargin * 2}mm)`;
+    const labelHeight = `calc((${pageH} - ${pageMargin * 2}mm - ${gap * 2}mm) / 3)`;
+
     const printWindow = window.open('', '_blank');
-    
+
     const labelData = { ...data };
     labelData.tireSizes = tireSizesArray;
     labelData.tireBrands = tireBrandsArray;
-    labelData.tireMevsims = tireMevsimsArray;
-    
+
     const seriNo = data.seriNo || '';
-    
-    // Collect all labels in order: all depot labels, then müşteri, then işyeri
+
+    // SADECE DEPO ETIKETLERI
     const allLabels = [];
     for (let i = 0; i < depotLabelCount; i++) {
         const tireSize = tireSizesArray[i] || data.ebat || '';
-        allLabels.push(createDepoLabel(labelData, tireSize, labelWidth, labelHeight, seriNo));
-        }
-    allLabels.push(createMusteriLabel(data, labelWidth, labelHeight, seriNo));
-    allLabels.push(createIsyeriLabel(data, labelWidth, labelHeight, seriNo));
-    
-    // Build HTML: single column, 3 labels per A5 page
-    let labelsHTML = `<div id="printArea" style="font-family: 'Poppins', sans-serif; width: 100%; max-width: ${pageWidth}; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">`;
-    
+        allLabels.push(createDepoLabel(labelData, tireSize, '95mm', '63mm', seriNo));
+    }
+
+    // HTML: tek kolon, sayfa başına 3 etiket
+    let labelsHTML = `<div id="printArea" style="font-family: 'Poppins', sans-serif; width:${pageW}; height:${pageH}; margin:0 auto; padding:${pageMargin}mm; box-sizing:border-box; display:flex; flex-direction:column;">`;
+
     allLabels.forEach((label, idx) => {
         const isEndOfPage = ((idx + 1) % 3 === 0) || (idx === allLabels.length - 1);
-        const marginBottom = isEndOfPage ? '0' : labelGap;
-        labelsHTML += `<div class="label-wrapper" style="margin-bottom: ${marginBottom}; page-break-inside: avoid;">${label}</div>`;
+        const marginBottom = isEndOfPage ? '0' : `${gap}mm`;
+
+        labelsHTML += `<div class="label-wrapper" style="width:100%; height:${labelHeight}; margin-bottom:${marginBottom}; page-break-inside:avoid;">${label}</div>`;
+
         if ((idx + 1) % 3 === 0 && idx !== allLabels.length - 1) {
             labelsHTML += `<div class="page-break"></div>`;
         }
     });
-    
-    labelsHTML += '</div>';
-    
-    // Get all style tags content
+
+    labelsHTML += `</div>`;
+
+    // Mevcut style tag’lerini al (depo-label border vs.)
     let cssContent = '';
     const styleTags = document.querySelectorAll('style');
-    styleTags.forEach(tag => {
-        cssContent += tag.textContent + '\n';
-    });
-    
+    styleTags.forEach(tag => { cssContent += tag.textContent + '\n'; });
+
     printWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Lastik Etiketleri</title>
+            <title>Depo Etiketleri</title>
             <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
             <style>
                 @page {
-                    size: A5 portrait;
-                    margin: 4mm;
+                    size: 105mm 210mm;
+                    margin: 0;
                 }
                 body {
                     font-family: 'Poppins', sans-serif;
@@ -1538,16 +1689,9 @@ function printLabels() {
                     background: white;
                 }
                 ${cssContent}
-                .no-print {
-                    display: none !important;
-                }
-                .label-wrapper {
-                    width: ${labelWidth};
-                    height: ${labelHeight};
-                }
-                .page-break {
-                    page-break-after: always;
-                }
+                .no-print { display: none !important; }
+                .label-wrapper { width: 100%; }
+                .page-break { page-break-after: always; }
             </style>
         </head>
         <body>
@@ -1555,15 +1699,15 @@ function printLabels() {
         </body>
         </html>
     `);
-    
+
     printWindow.document.close();
-    
-    // Wait for content to load, then print
+
     setTimeout(() => {
         printWindow.print();
         printWindow.close();
     }, 250);
 }
+
 
 </script>
 {% endblock %}
