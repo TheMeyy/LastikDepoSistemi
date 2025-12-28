@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Lastik Depo Sistemi{% endblock %}</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -169,65 +170,70 @@
     <!-- Top Navigation Bar -->
     <nav class="bg-white border-b border-gray-200 shadow-sm">
         <div class="max-w-7xl mx-auto px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
+          <div class="flex items-center h-16">
+
                 <!-- Logo and Brand -->
-                <div class="flex items-center space-x-3">
+               <div class="flex items-center space-x-2 ml-4">
+
                     <div class="flex items-center justify-center w-10 h-10">
                         <img src="/static/images/Nusretler logo-Photoroom.png" alt="NUSRETLER LASTİK Logo" class="h-10 w-auto object-contain">
                     </div>
                     <span class="text-xl font-bold text-gray-900">NUSRETLER LASTİK</span>
                 </div>
                 
-                <!-- Navigation Links -->
-                <div class="flex items-center space-x-1">
-                    <a href="/lastik-ara" class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/lastik-ara' or current_path == '/' %}active{% endif %}">
-                        Lastik Ara
-                    </a>
-                    <a href="/yeni-lastik" class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/yeni-lastik' %}active{% endif %}">
-                        Yeni Lastik Girişi
-                    </a>
-                    <a href="/musteriler" class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/musteriler' %}active{% endif %}">
-                        Müşteriler
-                    </a>
-                    <a href="/raflar" class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/raflar' %}active{% endif %}">
-                        Raflar
-                    </a>
-                    <a href="/lastik-etiketleri" class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/lastik-etiketleri' %}active{% endif %}">
-                        Lastik Etiketleri
-                    </a>
-                    <a href="/musteri-gecmisi" class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/musteri-gecmisi' %}active{% endif %}">
-                        Müşteri Geçmişi
-                    </a>
-                    <!-- Dark mode toggle -->
-                    <button id="dark-mode-toggle" type="button" class="ml-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2" aria-pressed="false" title="Dark Mode">
-                        <span class="hidden sm:inline">Dark</span>
-                        <svg class="icon-sun" data-icon="sun" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M7.05 7.05 5.636 5.636m12.728 0L17.95 7.05M7.05 16.95l-1.414 1.414M12 8a4 4 0 100 8 4 4 0 000-8z"></path>
-                        </svg>
-                        <svg class="icon-moon hidden" data-icon="moon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 0010.02 9.79z"></path>
-                        </svg>
-                    </button>
-                </div>
-                
-                <!-- Right Icons -->
-                <div class="flex items-center space-x-4">
-                    <button class="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                        </svg>
-                    </button>
-                    <button class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </button>
-                    <button class="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                        </svg>
-                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                    </button>
+  <!-- Navigation -->
+<div class="flex items-center justify-between h-16">
+
+    <!-- SOL: Menü  -->
+    <div class="flex items-center space-x-2">
+
+        <div class="flex items-center space-x-1">
+            <a href="/lastik-ara"
+               class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/lastik-ara' or current_path == '/' %}active{% endif %}">
+                Lastik Ara
+            </a>
+            <a href="/yeni-lastik"
+               class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/yeni-lastik' %}active{% endif %}">
+                Yeni Lastik Girişi
+            </a>
+            <a href="/musteriler"
+               class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/musteriler' %}active{% endif %}">
+                Müşteriler
+            </a>
+            <a href="/raflar"
+               class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/raflar' %}active{% endif %}">
+                Raflar
+            </a>
+            <a href="/lastik-etiketleri"
+               class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/lastik-etiketleri' %}active{% endif %}">
+                Lastik Etiketleri
+            </a>
+            <a href="/musteri-gecmisi"
+               class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/musteri-gecmisi' %}active{% endif %}">
+                Müşteri Geçmişi
+            </a>
+        </div>
+    </div>
+
+    <!-- SAĞ: Dark + Çıkış -->
+    <div class="flex items-center space-x-2">
+        <button id="dark-mode-toggle"
+                type="button"
+                class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition flex items-center gap-2">
+            <span class="hidden sm:inline">Dark</span>
+            ☀️
+        </button>
+
+        <a href="/logout"
+           class="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition whitespace-nowrap">
+            Çıkış
+        </a>
+    </div>
+
+</div>
+
+
+
                 </div>
             </div>
         </div>

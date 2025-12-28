@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Request, Depends, Query
 from fastapi.responses import HTMLResponse
+from fastapi import Form
+from fastapi.responses import RedirectResponse
 from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -13,6 +15,8 @@ from sqlalchemy import func
 import os
 import unicodedata
 import re
+
+
 
 
 def normalize_turkish_text(text: str) -> str:
@@ -42,41 +46,49 @@ def normalize_turkish_text(text: str) -> str:
 
 router = APIRouter()
 
+LOGIN_USERNAME = "nusretler"
+LOGIN_PASSWORD = "1234"
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    template = templates.get_template("login.html")
+    return HTMLResponse(template.render(request=request, error=None))
+
+
+
+
+@router.post("/login", response_class=HTMLResponse)
+async def login_submit(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...)
+):
+    if username == LOGIN_USERNAME and password == LOGIN_PASSWORD:
+        request.session["logged_in"] = True
+        return RedirectResponse(url="/", status_code=302)
+
+    template = templates.get_template("login.html")
+    return HTMLResponse(
+        content=template.render(request=request, error="Kullanıcı adı veya şifre hatalı")
+    )
+
+@router.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/login", status_code=302)
+
+
+
+
+
 # Setup Jinja2 templates
 template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
 env = Environment(loader=FileSystemLoader(template_dir))
 templates = env
 
 
-@router.get("/", response_class=HTMLResponse)
-async def home(request: Request, db: Session = Depends(get_db)):
-    """Redirect to lastik-ara"""
-    # Get brands and tire sizes from database
-    brands = db.query(Brand).order_by(Brand.marka_adi).all()
-    brand_list = [brand.marka_adi for brand in brands]
-    
-    tire_sizes = db.query(TireSize).order_by(TireSize.ebat).all()
-    tire_size_list = [size.ebat for size in tire_sizes]
-    
-    query_params = {
-        "customer_name": "",
-        "plate": "",
-        "ebat": "",
-        "brand": "",
-        "dis_durumu": "",
-        "status": "Depoda",  # Default to "Depoda"
-        "entry_date_from": "",
-        "exit_date_from": ""
-    }
-    template = templates.get_template("index.html")
-    return HTMLResponse(content=template.render(
-        request=request,
-        tires=[],
-        brands=brand_list,
-        tire_sizes=tire_size_list,
-        query_params=query_params,
-        current_path="/"
-    ))
+
 
 
 @router.get("/lastik-ara", response_class=HTMLResponse)
