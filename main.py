@@ -62,12 +62,13 @@ app.add_middleware(
 # -------------------------------------------------
 # API ROUTER'LAR (⚠️ HEPSİ /api ALTINDA)
 # -------------------------------------------------
-app.include_router(customer_routes.router, prefix="/api")
-app.include_router(rack_routes.router, prefix="/api")
-app.include_router(tire_routes.router, prefix="/api")
-app.include_router(brand_routes.router, prefix="/api")
-app.include_router(tire_size_routes.router, prefix="/api")
-app.include_router(tire_history_routes.router, prefix="/api")
+app.include_router(customer_routes.router)
+app.include_router(rack_routes.router)
+app.include_router(tire_routes.router)
+app.include_router(brand_routes.router)
+app.include_router(tire_size_routes.router)
+app.include_router(tire_history_routes.router)
+
 
 # -------------------------------------------------
 # WEB ROUTER (HTML SAYFALAR)
