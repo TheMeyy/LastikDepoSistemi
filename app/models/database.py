@@ -1,15 +1,14 @@
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Render / Production DATABASE_URL
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set")
+    # PROD'DA CRASH YOK
+    print("WARNING: DATABASE_URL is not set. Using fallback SQLite.")
+    DATABASE_URL = "sqlite:///./fallback.db"
 
-# SQLAlchemy engine
 engine = create_engine(
     DATABASE_URL,
     echo=False,
