@@ -336,39 +336,11 @@ async function exitTire(tireId) {
     hideExitModal();
     
     try {
-        const tireResponse = await fetch(`/api/tires/${tireId}`);
-        if (!tireResponse.ok) {
-            const errorText = await tireResponse.text();
-            console.error('Error fetching tire:', errorText);
-            showErrorModal('Lastik bilgileri alınamadı. Lütfen sayfayı yenileyip tekrar deneyin.');
-            return;
-        }
-        
-        const tire = await tireResponse.json();
-        
-        // Format dates properly
-        const girisTarihi = tire.giris_tarihi ? new Date(tire.giris_tarihi).toISOString() : null;
-        const cikisTarihi = new Date().toISOString();
-        
-        const updateData = {
-            musteri_id: tire.musteri_id,
-            brand: tire.brand,
-            ebat: tire.ebat,
-            mevsim: tire.mevsim,
-            dis_durumu: tire.dis_durumu,
-            not: tire.not_ || null,
-            raf_id: tire.raf_id,
-            giris_tarihi: girisTarihi,
-            cikis_tarihi: cikisTarihi,
-            durum: "CIKTI"
-        };
-        
-        const response = await fetch(`/api/tires/${tireId}`, {
-            method: 'PUT',
+        const response = await fetch(`/api/tires/${tireId}/exit`, {
+            method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(updateData)
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
         
         if (response.ok) {
@@ -401,7 +373,6 @@ async function exitTire(tireId) {
                 location.reload();
             }, 2000);
         } else {
-            // Try to parse error as JSON, if fails show text
             let errorMessage = 'Bilinmeyen bir hata oluştu';
             try {
                 const errorData = await response.json();
@@ -411,57 +382,11 @@ async function exitTire(tireId) {
                 console.error('Error response:', errorText);
                 errorMessage = 'Sunucu hatası: ' + (errorText.substring(0, 100) || 'Bilinmeyen hata');
             }
-            // Show error modal
-            const errorModal = document.createElement('div');
-            errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-            errorModal.innerHTML = `
-                <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                    <div class="flex items-center space-x-4 mb-4">
-                        <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
-                            <p class="text-sm text-gray-600 mt-1">${errorMessage}</p>
-                        </div>
-                    </div>
-                    <div class="flex justify-end">
-                        <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
-                            Kapat
-                        </button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(errorModal);
+            showErrorModal(errorMessage);
         }
     } catch (error) {
         console.error('Error:', error);
-        // Show error modal
-        const errorModal = document.createElement('div');
-        errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-        errorModal.innerHTML = `
-            <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                <div class="flex items-center space-x-4 mb-4">
-                    <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
-                        <p class="text-sm text-gray-600 mt-1">Bir hata oluştu: ${error.message}</p>
-                    </div>
-                </div>
-                <div class="flex justify-end">
-                    <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
-                        Kapat
-                    </button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(errorModal);
+        showErrorModal('Bir hata oluştu: ' + error.message);
     }
 }
 

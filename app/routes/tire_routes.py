@@ -692,7 +692,9 @@ def create_tire_history_entry(
         eski_seri_no=eski_seri_no,
         yeni_lastik_ebat=json.dumps(new_tire_sizes) if new_tire_sizes else None,
         yeni_lastik_marka=new_brand_name,
+        yeni_lastik_marka_json=json.dumps(new_tire_brands) if new_tire_brands else None,
         yeni_lastik_mevsim=yeni_lastik_mevsim,
+        yeni_lastik_mevsim_json=json.dumps(new_tire_mevsims) if new_tire_mevsims else None,
         yeni_seri_no=yeni_seri_no,
         raf_kodu=rack_code,
         not_=not_
@@ -845,7 +847,8 @@ def change_tire(
             detail=f"Error changing tire: {str(e)}"
         )
     
-    @router.post("/{tire_id}/exit", status_code=200)
+  
+@router.post("/{tire_id}/exit", status_code=200)
 def exit_tire(
     tire_id: int,
     not_: Optional[str] = None,
@@ -862,7 +865,10 @@ def exit_tire(
         raise HTTPException(status_code=404, detail="Lastik bulunamadı")
 
     if tire.durum != ModelTireDurumEnum.DEPODA:
-        raise HTTPException(status_code=400, detail="Bu lastik zaten depoda değil")
+        raise HTTPException(
+            status_code=400,
+            detail="Bu lastik zaten depoda değil"
+        )
 
     # 2️⃣ Çıkış bilgilerini set et
     tire.durum = ModelTireDurumEnum.CIKTI
@@ -873,7 +879,7 @@ def exit_tire(
     create_tire_history_entry(
         db=db,
         old_tire=tire,
-        new_tire=None,  # 🔥 KRİTİK
+        new_tire=None,  # 🔥 ÇIKIŞ İŞLEMİ
         islem_turu=ModelIslemTuruEnum.DEPODAN_CIKIS,
         customer=tire.customer,
         not_=not_

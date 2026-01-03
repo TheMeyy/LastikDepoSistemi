@@ -141,6 +141,7 @@ const tireSizes = {{ tire_sizes | tojson if tire_sizes else '[]' }};
 const brandOptions = {{ brands | tojson if brands else '[]' }};
 const manualTireSizes = new Set();  // Tracks sizes added manually in this session
 const manualBrands = new Set();      // Tracks brands added manually in this session
+let activeBrandSelectId = null;      // Tracks which brand dropdown triggered the add modal
 
 function addTireField() {
     if (tireCount >= maxTires) {
@@ -206,7 +207,7 @@ function addTireField() {
                 <select id="tire${tireCount}_brand" name="tire${tireCount}_brand" 
                         class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus-border-blue-500 transition-all appearance-none bg-white pr-10">
                 </select>
-                <button type="button" onclick="showAddBrandModal()" 
+                <button type="button" onclick="showAddBrandModal('tire${tireCount}_brand')" 
                         class="px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm flex-shrink-0"
                         title="Yeni marka ekle">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -689,6 +690,10 @@ async function confirmDeleteBrandSelect(selectId) {
             if (opt) opt.remove();
             if (dropdown.value === selectedValue) dropdown.value = '';
         });
+        const optionIndex = brandOptions.indexOf(selectedValue);
+        if (optionIndex !== -1) {
+            brandOptions.splice(optionIndex, 1);
+        }
         manualBrands.delete(selectedValue);
         showSuccessModal('Marka silindi');
     } catch (error) {
@@ -1221,7 +1226,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Add Brand Modal Functions
-function showAddBrandModal() {
+function showAddBrandModal(selectId = null) {
+    activeBrandSelectId = selectId;
     document.getElementById('addBrandModal').classList.remove('hidden');
     document.getElementById('newBrandName').value = '';
     document.getElementById('newBrandName').focus();
@@ -1230,6 +1236,7 @@ function showAddBrandModal() {
 function hideAddBrandModal() {
     document.getElementById('addBrandModal').classList.add('hidden');
     document.getElementById('newBrandName').value = '';
+    activeBrandSelectId = null;
 }
 
 async function saveNewBrand() {
@@ -1251,20 +1258,24 @@ async function saveNewBrand() {
         
         if (response.ok) {
             const newBrand = await response.json();
-            
-            // Add to brand dropdown
-            const brandSelect = document.getElementById('brand');
-            const newOption = document.createElement('option');
-            newOption.value = newBrand.marka_adi;
-            newOption.textContent = newBrand.marka_adi;
-            newOption.dataset.manual = "true";
-            newOption.selected = true;
-            brandSelect.appendChild(newOption);
-            manualBrands.add(newBrand.marka_adi);
-            brandOptions.push(newBrand.marka_adi);
-            // Add to all per-tire brand dropdowns
-            document.querySelectorAll('select[id*="_brand"]').forEach(sel => fillBrandOptions(sel));
-            
+            const brandNameValue = newBrand.marka_adi;
+
+            if (!brandOptions.includes(brandNameValue)) {
+                brandOptions.push(brandNameValue);
+            }
+            manualBrands.add(brandNameValue);
+
+            const brandSelects = document.querySelectorAll('select[id*="_brand"]');
+            brandSelects.forEach(sel => {
+                const prevValue = sel.value;
+                fillBrandOptions(sel);
+                if (activeBrandSelectId && sel.id === activeBrandSelectId) {
+                    sel.value = brandNameValue;
+                } else if (prevValue) {
+                    sel.value = prevValue;
+                }
+            });
+
             hideAddBrandModal();
             
             // Show success message

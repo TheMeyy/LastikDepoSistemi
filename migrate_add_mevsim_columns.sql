@@ -18,3 +18,5 @@ ADD COLUMN IF NOT EXISTS yeni_lastik_mevsim VARCHAR(20);
 
 
 
+
+
