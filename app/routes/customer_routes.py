@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
 from app.models.database import get_db
-from app.models.models import Customer
+from app.models.models import Customer, TireHistory
 from app.schemas.customer_schema import CustomerCreate, CustomerRead
 
 router = APIRouter(prefix="/api/customers", tags=["customers"])
@@ -121,6 +121,18 @@ def delete_customer(customer_id: int, db: Session = Depends(get_db)):
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Lastikler silinirken bir hata oluştu: {str(e)}"
+            )
+        
+        # Delete tire history records referencing this customer to avoid FK violations
+        try:
+            history_deleted = db.query(TireHistory).filter(TireHistory.musteri_id == customer_id).delete(synchronize_session=False)
+            print(f"Deleted {history_deleted} history records for customer {customer_id}")
+        except Exception as e:
+            print(f"Error deleting tire history: {e}")
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Müşteri geçmişi silinirken bir hata oluştu: {str(e)}"
             )
         
         # Now delete customer
