@@ -402,41 +402,7 @@ def update_tire(
         # Update rack statuses based on tire status
         # If tire is "Çıkmış" (Exited), set rack to "Boş" (Empty)
         # Use model enum for comparison
-        if db_tire.durum == ModelTireDurumEnum.CIKTI:
-            # Create history entry for exit
-            exit_customer = db.query(Customer).filter(Customer.id == db_tire.musteri_id).first()
-            if exit_customer:
-                # Create a "dummy" new tire for history (same as old but status changed)
-                # We need to reload db_tire with relationships for history
-                # joinedload is already imported at the top of the file
-                db_tire_with_rels = db.query(Tire).options(
-                    joinedload(Tire.brand),
-                    joinedload(Tire.customer),
-                    joinedload(Tire.rack)
-                ).filter(Tire.id == tire_id).first()
-                if db_tire_with_rels:
-                    # For exit, old_tire and new_tire are the same (status changed)
-                    # eski_seri_no = current seri_no, yeni_seri_no = None (no new tire)
-                    create_tire_history_entry(
-                        db=db,
-                        old_tire=db_tire_with_rels,
-                        new_tire=db_tire_with_rels,  # Same tire, just status changed
-                        islem_turu=ModelIslemTuruEnum.DEPODAN_CIKIS,
-                        customer=exit_customer,
-                        not_=tire.not_
-                    )
-            
-            if old_rack:
-                # Check if there are other tires in this rack
-                from sqlalchemy import func
-                other_tires_count = db.query(func.count(Tire.id)).filter(
-                    Tire.raf_id == old_rack_id,
-                    Tire.id != tire_id,
-                    Tire.durum == ModelTireDurumEnum.DEPODA
-                ).scalar()
-                if other_tires_count == 0:
-                    old_rack.durum = RackDurumEnum.BOS
-                    db.add(old_rack)
+       
         elif db_tire.durum == ModelTireDurumEnum.DEPODA:
             # If tire is "Depoda" (In Depot), set rack to "Dolu" (Full)
             rack.durum = RackDurumEnum.DOLU
@@ -636,105 +602,83 @@ def format_tire_response(tire: Tire, db: Session) -> TireRead:
 def create_tire_history_entry(
     db: Session,
     old_tire: Tire,
-    new_tire: Tire,
+    new_tire: Optional[Tire],
     islem_turu: ModelIslemTuruEnum,
     customer: Customer,
     not_: Optional[str] = None
 ):
     """Create a tire history entry"""
-    # Collect old tire sizes, brands, mevsims
+
+    # -------------------------
+    # OLD TIRE DATA
+    # -------------------------
     old_tire_sizes = []
-    old_tire_brands = []
-    old_tire_mevsims = []
     for i in range(1, 7):
-        size = getattr(old_tire, f'tire{i}_size', None)
-        prod_date = getattr(old_tire, f'tire{i}_production_date', None)
-        brand_val = getattr(old_tire, f'tire{i}_brand', None) or (old_tire.brand.marka_adi if old_tire.brand else None)
-        mevsim_val = getattr(old_tire, f'tire{i}_mevsim', None) or getattr(old_tire, 'mevsim', None)
+        size = getattr(old_tire, f"tire{i}_size", None)
+        prod_date = getattr(old_tire, f"tire{i}_production_date", None)
+        brand_val = getattr(old_tire, f"tire{i}_brand", None) or (
+            old_tire.brand.marka_adi if old_tire.brand else None
+        )
+        mevsim_val = getattr(old_tire, f"tire{i}_mevsim", None) or old_tire.mevsim
+
         if size:
             old_tire_sizes.append({
                 "size": size,
                 "year": prod_date,
                 "brand": brand_val,
-                "mevsim": mevsim_val.value if hasattr(mevsim_val, 'value') else mevsim_val
+                "mevsim": mevsim_val.value if hasattr(mevsim_val, "value") else mevsim_val
             })
-            old_tire_brands.append(brand_val)
-            old_tire_mevsims.append(mevsim_val.value if hasattr(mevsim_val, 'value') else mevsim_val)
-    
-    # Collect new tire sizes, brands, mevsims
+
+    old_brand_name = old_tire.brand.marka_adi if old_tire.brand else ""
+    eski_giris_tarihi = old_tire.giris_tarihi
+    eski_lastik_mevsim = old_tire.mevsim
+    eski_seri_no = old_tire.seri_no
+
+    # -------------------------
+    # NEW TIRE DATA (OPSİYONEL)
+    # -------------------------
     new_tire_sizes = []
     new_tire_brands = []
     new_tire_mevsims = []
-    for i in range(1, 7):
-        size = getattr(new_tire, f'tire{i}_size', None)
-        prod_date = getattr(new_tire, f'tire{i}_production_date', None)
-        brand_val = getattr(new_tire, f'tire{i}_brand', None)
-        if not brand_val and hasattr(new_tire, 'brand') and new_tire.brand:
-            brand_val = new_tire.brand.marka_adi
-        mevsim_val = getattr(new_tire, f'tire{i}_mevsim', None) or getattr(new_tire, 'mevsim', None)
-        if size:
-            new_tire_sizes.append({
-                "size": size,
-                "year": prod_date,
-                "brand": brand_val,
-                "mevsim": mevsim_val.value if hasattr(mevsim_val, 'value') else mevsim_val
-            })
-            new_tire_brands.append(brand_val)
-            new_tire_mevsims.append(mevsim_val.value if hasattr(mevsim_val, 'value') else mevsim_val)
-    
-    # Get brand names
-    old_brand_name = old_tire.brand.marka_adi if old_tire.brand else ""
-    
-    # For new tire, get brand by marka_id since relationship might not be loaded yet
-    new_brand_name = ""
-    if new_tire_brands:
-        new_brand_name = new_tire_brands[0] or ""
-    elif hasattr(new_tire, 'marka_id') and new_tire.marka_id:
-        new_brand = db.query(Brand).filter(Brand.id == new_tire.marka_id).first()
-        if new_brand:
-            new_brand_name = new_brand.marka_adi
-    elif new_tire.brand:
-        new_brand_name = new_tire.brand.marka_adi
-    
-    # Get rack code
-    rack_code = new_tire.rack.kod if new_tire.rack else (old_tire.rack.kod if old_tire.rack else "")
-    
-    # Get old tire entry date
-    eski_giris_tarihi = old_tire.giris_tarihi if old_tire.giris_tarihi else None
-    
-    # Get mevsim (season) values
-    eski_lastik_mevsim = old_tire.mevsim if old_tire.mevsim else None
-    yeni_lastik_mevsim = new_tire_mevsims[0] if new_tire_mevsims else (new_tire.mevsim if new_tire.mevsim else None)
-    
-    # Get serial numbers - use getattr with default None
-    # Try multiple ways to get seri_no
-    eski_seri_no = None
-    yeni_seri_no = None
-    
-    # For old_tire: try getattr first, then direct attribute access
-    if hasattr(old_tire, 'seri_no'):
-        eski_seri_no = old_tire.seri_no
+
+    if new_tire:
+        for i in range(1, 7):
+            size = getattr(new_tire, f"tire{i}_size", None)
+            prod_date = getattr(new_tire, f"tire{i}_production_date", None)
+            brand_val = getattr(new_tire, f"tire{i}_brand", None) or (
+                new_tire.brand.marka_adi if new_tire.brand else None
+            )
+            mevsim_val = getattr(new_tire, f"tire{i}_mevsim", None) or new_tire.mevsim
+
+            if size:
+                new_tire_sizes.append({
+                    "size": size,
+                    "year": prod_date,
+                    "brand": brand_val,
+                    "mevsim": mevsim_val.value if hasattr(mevsim_val, "value") else mevsim_val
+                })
+                new_tire_brands.append(brand_val)
+                new_tire_mevsims.append(
+                    mevsim_val.value if hasattr(mevsim_val, "value") else mevsim_val
+                )
+
+    yeni_seri_no = new_tire.seri_no if new_tire else None
+    yeni_lastik_mevsim = new_tire_mevsims[0] if new_tire_mevsims else None
+    new_brand_name = new_tire_brands[0] if new_tire_brands else ""
+
+    # -------------------------
+    # RACK CODE
+    # -------------------------
+    if new_tire and new_tire.rack:
+        rack_code = new_tire.rack.kod
+    elif old_tire.rack:
+        rack_code = old_tire.rack.kod
     else:
-        # Try to get from __dict__ if it's a new object
-        eski_seri_no = getattr(old_tire, 'seri_no', None)
-    
-    # For new_tire: it might be a new object not yet committed
-    # Check if it has seri_no attribute (it should be set during creation)
-    if hasattr(new_tire, 'seri_no'):
-        yeni_seri_no = new_tire.seri_no
-    else:
-        # Try to get from __dict__ if it's a new object
-        yeni_seri_no = getattr(new_tire, 'seri_no', None)
-    
-    # Debug: Print serial numbers for troubleshooting
-    print(f"create_tire_history_entry - eski_seri_no: {eski_seri_no}, yeni_seri_no: {yeni_seri_no}")
-    print(f"create_tire_history_entry - old_tire.id: {getattr(old_tire, 'id', None)}, new_tire.id: {getattr(new_tire, 'id', None)}")
-    print(f"create_tire_history_entry - old_tire type: {type(old_tire)}, new_tire type: {type(new_tire)}")
-    if hasattr(old_tire, '__dict__'):
-        print(f"create_tire_history_entry - old_tire.__dict__ keys: {list(old_tire.__dict__.keys())}")
-    if hasattr(new_tire, '__dict__'):
-        print(f"create_tire_history_entry - new_tire.__dict__ keys: {list(new_tire.__dict__.keys())}")
-    
+        rack_code = ""
+
+    # -------------------------
+    # HISTORY RECORD
+    # -------------------------
     history_entry = TireHistory(
         musteri_id=customer.id,
         musteri_adi=customer.ad_soyad,
@@ -748,15 +692,15 @@ def create_tire_history_entry(
         eski_seri_no=eski_seri_no,
         yeni_lastik_ebat=json.dumps(new_tire_sizes) if new_tire_sizes else None,
         yeni_lastik_marka=new_brand_name,
-        yeni_lastik_marka_json=json.dumps(new_tire_brands) if new_tire_brands else None,
         yeni_lastik_mevsim=yeni_lastik_mevsim,
-        yeni_lastik_mevsim_json=json.dumps(new_tire_mevsims) if new_tire_mevsims else None,
         yeni_seri_no=yeni_seri_no,
         raf_kodu=rack_code,
         not_=not_
     )
+
     db.add(history_entry)
     return history_entry
+
 
 
 @router.post("/{tire_id}/change", response_model=TireRead, status_code=status.HTTP_201_CREATED)
@@ -900,4 +844,53 @@ def change_tire(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error changing tire: {str(e)}"
         )
+    
+    @router.post("/{tire_id}/exit", status_code=200)
+def exit_tire(
+    tire_id: int,
+    not_: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    # 1️⃣ Lastiği al
+    tire = db.query(Tire).options(
+        joinedload(Tire.brand),
+        joinedload(Tire.customer),
+        joinedload(Tire.rack)
+    ).filter(Tire.id == tire_id).first()
+
+    if not tire:
+        raise HTTPException(status_code=404, detail="Lastik bulunamadı")
+
+    if tire.durum != ModelTireDurumEnum.DEPODA:
+        raise HTTPException(status_code=400, detail="Bu lastik zaten depoda değil")
+
+    # 2️⃣ Çıkış bilgilerini set et
+    tire.durum = ModelTireDurumEnum.CIKTI
+    tire.cikis_tarihi = datetime.now()
+    db.add(tire)
+
+    # 3️⃣ History EKLE (❗ new_tire YOK)
+    create_tire_history_entry(
+        db=db,
+        old_tire=tire,
+        new_tire=None,  # 🔥 KRİTİK
+        islem_turu=ModelIslemTuruEnum.DEPODAN_CIKIS,
+        customer=tire.customer,
+        not_=not_
+    )
+
+    # 4️⃣ Raf boş mu kontrol et
+    other_tires = db.query(func.count(Tire.id)).filter(
+        Tire.raf_id == tire.raf_id,
+        Tire.durum == ModelTireDurumEnum.DEPODA,
+        Tire.id != tire.id
+    ).scalar()
+
+    if other_tires == 0 and tire.rack:
+        tire.rack.durum = RackDurumEnum.BOS
+        db.add(tire.rack)
+
+    db.commit()
+    return {"message": "Depodan çıkış yapıldı"}
+
 
