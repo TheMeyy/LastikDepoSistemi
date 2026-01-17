@@ -768,7 +768,7 @@
             let labelWidth = '90mm';
             let labelHeight = '70mm';
             let labelMargin = '8mm';
-            let cols = 1;
+            let cols = Math.min(2, depotLabelCount);
 
             // Update data.tireSizes to ensure it's an filtered array
             data.tireSizes = tireSizesArray;

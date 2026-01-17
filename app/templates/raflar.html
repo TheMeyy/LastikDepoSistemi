@@ -78,7 +78,7 @@
                     <div class="flex items-center">
                         <div
                             class="min-w-[2.5rem] h-10 px-3 bg-white rounded-lg border border-gray-300 flex items-center justify-center font-bold text-indigo-600 shadow-sm mr-4 whitespace-nowrap">
-                            {% if group.prefix|length > 6 and ' ' in group.prefix %}
+                            {% if ' ' in group.prefix %}
                             {% set words = group.prefix.split(' ') %}
                             {% for word in words %}{{ word[0]|upper }}{% endfor %}
                             {% else %}
@@ -86,7 +86,7 @@
                             {% endif %}
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold text-gray-800">{{ group.prefix }} Grubu</h3>
+                            <h3 class="text-lg font-bold text-gray-800">{{ group.prefix }}</h3>
                             <span class="text-xs text-gray-500 font-medium">{{ group.racks|length }} adet raf
                                 mevcuttur</span>
                         </div>

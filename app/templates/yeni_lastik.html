@@ -448,19 +448,11 @@
     }
 
     function showErrorModal(message) {
-        if (window.showToast) {
-            window.showToast(message, 'error');
-        } else {
-            alert('Hata: ' + message);
-        }
+        window.showToast(message, 'error');
     }
 
     function showSuccessModal(message) {
-        if (window.showToast) {
-            window.showToast(message, 'success');
-        } else {
-            alert(message);
-        }
+        window.showToast(message, 'success');
     }
 
     function fillTireSizeOptions(selectEl, selectedValue = '', filterText = '') {
@@ -925,56 +917,12 @@
 
             // Validation
             if (!customerName || !customerPlate || !customerPhone) {
-                const errorModal = document.createElement('div');
-                errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                errorModal.innerHTML = `
-                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                        <div class="flex items-center space-x-4 mb-4">
-                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
-                                <p class="text-sm text-gray-600 mt-1">Lütfen tüm müşteri bilgilerini doldurun!</p>
-                            </div>
-                        </div>
-                        <div class="flex justify-end">
-                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
-                                Kapat
-                            </button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(errorModal);
+                showErrorModal('Lütfen tüm müşteri bilgilerini doldurun!');
                 return;
             }
 
             if (tires.length === 0) {
-                const errorModal = document.createElement('div');
-                errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                errorModal.innerHTML = `
-                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                        <div class="flex items-center space-x-4 mb-4">
-                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
-                                <p class="text-sm text-gray-600 mt-1">En az bir lastik ebatı seçmelisiniz!</p>
-                            </div>
-                        </div>
-                        <div class="flex justify-end">
-                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
-                                Kapat
-                            </button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(errorModal);
+                showErrorModal('En az bir lastik ebatı seçmelisiniz!');
                 return;
             }
 
@@ -982,83 +930,17 @@
             const invalidBrand = tires.find(t => !t.brand);
             const invalidMevsim = tires.find(t => !t.mevsim);
             if (invalidBrand || invalidMevsim) {
-                const errorModal = document.createElement('div');
-                errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                errorModal.innerHTML = `
-                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                        <div class="flex items-center space-x-4 mb-4">
-                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
-                                <p class="text-sm text-gray-600 mt-1">Her lastik için marka ve mevsim seçmelisiniz.</p>
-                            </div>
-                        </div>
-                        <div class="flex justify-end">
-                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
-                                Kapat
-                            </button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(errorModal);
+                showErrorModal('Her lastik için marka ve mevsim seçmelisiniz.');
                 return;
             }
 
             if (!dis_durumu) {
-                const errorModal = document.createElement('div');
-                errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                errorModal.innerHTML = `
-                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                        <div class="flex items-center space-x-4 mb-4">
-                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
-                                <p class="text-sm text-gray-600 mt-1">Lütfen diş durumunu seçin!</p>
-                            </div>
-                        </div>
-                        <div class="flex justify-end">
-                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
-                                Kapat
-                            </button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(errorModal);
+                showErrorModal('Lütfen diş durumunu seçin!');
                 return;
             }
 
             if (!rafId) {
-                const errorModal = document.createElement('div');
-                errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                errorModal.innerHTML = `
-                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                        <div class="flex items-center space-x-4 mb-4">
-                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
-                                <p class="text-sm text-gray-600 mt-1">Lütfen bir raf seçin!</p>
-                            </div>
-                        </div>
-                        <div class="flex justify-end">
-                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
-                                Kapat
-                            </button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(errorModal);
+                showErrorModal('Lütfen bir raf seçin!');
                 return;
             }
 
@@ -1097,57 +979,13 @@
                         const error = await createResponse.json();
                         const errorMessage = error.detail || 'Müşteri oluşturulamadı';
 
-                        const errorModal = document.createElement('div');
-                        errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                        errorModal.innerHTML = `
-                            <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                                <div class="flex items-center space-x-4 mb-4">
-                                    <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1">
-                                        <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
-                                        <p class="text-sm text-gray-600 mt-1">${errorMessage}</p>
-                                    </div>
-                                </div>
-                                <div class="flex justify-end">
-                                    <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
-                                        Kapat
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                        document.body.appendChild(errorModal);
+                        showErrorModal(errorMessage);
                         return;
                     }
                 }
             } catch (error) {
                 console.error('Error with customer:', error);
-                const errorModal = document.createElement('div');
-                errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                errorModal.innerHTML = `
-                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                        <div class="flex items-center space-x-4 mb-4">
-                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
-                                <p class="text-sm text-gray-600 mt-1">Bir hata oluştu: ${error.message}</p>
-                            </div>
-                        </div>
-                        <div class="flex justify-end">
-                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
-                                Kapat
-                            </button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(errorModal);
+                showErrorModal('Bir hata oluştu: ' + error.message);
                 return;
             }
 
@@ -1219,34 +1057,10 @@
         }
 
         if (response.ok) {
-            // Show success message
-            const successModal = document.createElement('div');
-            successModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-            successModal.innerHTML = `
-                        <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                            <div class="flex items-center space-x-4 mb-4">
-                                <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                </div>
-                                <div class="flex-1">
-                                    <h3 class="text-lg font-semibold text-gray-900">Başarılı</h3>
-                                    <p class="text-sm text-gray-600 mt-1">Lastik başarıyla depoya kaydedildi!</p>
-                                </div>
-                            </div>
-                            <div class="flex justify-end">
-                                <button onclick="this.closest('.fixed').remove(); window.location.href = '/lastik-ara';" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
-                                    Tamam
-                                </button>
-                            </div>
-                        </div>
-                    `;
-            document.body.appendChild(successModal);
+            showSuccessModal('Lastik başarıyla depoya kaydedildi!');
             setTimeout(() => {
-                successModal.remove();
                 window.location.href = '/lastik-ara';
-            }, 1500);
+            }, 1000);
         } else {
             // Try to parse error as JSON, if fails show text
             let errorMessage = 'Lastik kaydedilemedi';
@@ -1267,56 +1081,11 @@
                 }
             }
 
-            // Show error message
-            const errorModal = document.createElement('div');
-            errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-            errorModal.innerHTML = `
-                        <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                            <div class="flex items-center space-x-4 mb-4">
-                                <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
-                                </div>
-                                <div class="flex-1">
-                                    <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
-                                    <p class="text-sm text-gray-600 mt-1">${errorMessage}</p>
-                                </div>
-                            </div>
-                            <div class="flex justify-end">
-                                <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
-                                    Kapat
-                                </button>
-                            </div>
-                        </div>
-                    `;
-            document.body.appendChild(errorModal);
+            showErrorModal(errorMessage);
         }
     } catch (error) {
         console.error('Error creating tire:', error);
-        const errorModal = document.createElement('div');
-        errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-        errorModal.innerHTML = `
-                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                        <div class="flex items-center space-x-4 mb-4">
-                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="text-lg font-semibold text-gray-900">Hata</h3>
-                                <p class="text-sm text-gray-600 mt-1">Bir hata oluştu: ${error.message}</p>
-                            </div>
-                        </div>
-                        <div class="flex justify-end">
-                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-2.5 rounded-lg transition-colors">
-                                Kapat
-                            </button>
-                        </div>
-                    </div>
-                `;
-        document.body.appendChild(errorModal);
+        showErrorModal('Bir hata oluştu: ' + error.message);
     }
         });
     }
@@ -1375,31 +1144,7 @@
 
                 hideAddBrandModal();
 
-                // Show success message
-                const successModal = document.createElement('div');
-                successModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                successModal.innerHTML = `
-                <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                    <div class="flex items-center space-x-4 mb-4">
-                        <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="text-lg font-semibold text-gray-900">Başarılı</h3>
-                            <p class="text-sm text-gray-600 mt-1">Marka başarıyla eklendi!</p>
-                        </div>
-                    </div>
-                    <div class="flex justify-end">
-                        <button onclick="this.closest('.fixed').remove()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
-                            Tamam
-                        </button>
-                    </div>
-                </div>
-            `;
-                document.body.appendChild(successModal);
-                setTimeout(() => successModal.remove(), 2000);
+                showSuccessModal('Marka başarıyla eklendi!');
             } else {
                 const errorData = await response.json();
                 showErrorModal(errorData.detail || 'Marka eklenemedi');
@@ -1465,31 +1210,7 @@
 
                 hideAddTireSizeModal();
 
-                // Show success message
-                const successModal = document.createElement('div');
-                successModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                successModal.innerHTML = `
-                <div class="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-                    <div class="flex items-center space-x-4 mb-4">
-                        <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="text-lg font-semibold text-gray-900">Başarılı</h3>
-                            <p class="text-sm text-gray-600 mt-1">Ebat başarıyla eklendi!</p>
-                        </div>
-                    </div>
-                    <div class="flex justify-end">
-                        <button onclick="this.closest('.fixed').remove()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors shadow-sm">
-                            Tamam
-                        </button>
-                    </div>
-                </div>
-            `;
-                document.body.appendChild(successModal);
-                setTimeout(() => successModal.remove(), 2000);
+                showSuccessModal('Ebat başarıyla eklendi!');
             } else {
                 const errorData = await response.json();
                 showErrorModal(errorData.detail || 'Ebat eklenemedi');

@@ -860,13 +860,16 @@ async def raflar(request: Request, db: Session = Depends(get_db)):
     # Group racks by prefix (e.g., A, B, C)
     rack_groups = {}
     for rack in racks:
-        # Extract prefix from rack code (e.g., "A1" -> "A", "B4" -> "B")
-        match = re.match(r'^([A-Za-z]+)', rack.kod)
-        if match:
-            prefix = match.group(1)
+        # Extract prefix from rack code (e.g., "A-1" -> "A", "ARKA JENARATOR-2" -> "ARKA JENARATOR")
+        if '-' in rack.kod:
+            prefix = rack.kod.rsplit('-', 1)[0]
         else:
-            # If no prefix found, use first character
-            prefix = rack.kod[0] if rack.kod else "OTHER"
+            # Legacy support for codes like A1 or BAHÇE2
+            match = re.match(r'^([^0-9]+)', rack.kod)
+            if match:
+                prefix = match.group(1).strip()
+            else:
+                prefix = rack.kod[0] if rack.kod else "OTHER"
         
         if prefix not in rack_groups:
             rack_groups[prefix] = []

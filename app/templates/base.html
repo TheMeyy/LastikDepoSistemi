@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr" class="h-full">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +17,7 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+
         /* Active page highlighting */
         .nav-link.active {
             color: #2563eb;
@@ -27,33 +29,71 @@
             background-color: #0f172a;
             color: #e5e7eb;
         }
+
         body.dark-mode nav {
             background-color: #0b1220;
             border-color: #1f2937;
         }
+
         body.dark-mode footer {
             background-color: #0b1220;
             border-color: #1f2937;
             color: #cbd5e1;
         }
+
         body.dark-mode .nav-link {
             color: #e5e7eb;
         }
+
         body.dark-mode .nav-link.active {
             color: #93c5fd;
             border-color: #93c5fd;
         }
-        body.dark-mode .text-gray-900 { color: #f9fafb !important; }
-        body.dark-mode .text-gray-700 { color: #e5e7eb !important; }
-        body.dark-mode .text-gray-600 { color: #cbd5e1 !important; }
-        body.dark-mode .text-gray-500 { color: #94a3b8 !important; }
-        body.dark-mode .bg-white { background-color: #111827 !important; }
-        body.dark-mode .bg-gray-50 { background-color: #0f172a !important; }
-        body.dark-mode .border-gray-200 { border-color: #1f2937 !important; }
-        body.dark-mode .shadow-sm { box-shadow: none !important; }
-        body.dark-mode table { color: #e5e7eb; }
-        body.dark-mode thead { background-color: #0b1220; }
-        body.dark-mode tbody tr:hover { background-color: #111827; }
+
+        body.dark-mode .text-gray-900 {
+            color: #f9fafb !important;
+        }
+
+        body.dark-mode .text-gray-700 {
+            color: #e5e7eb !important;
+        }
+
+        body.dark-mode .text-gray-600 {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode .text-gray-500 {
+            color: #94a3b8 !important;
+        }
+
+        body.dark-mode .bg-white {
+            background-color: #111827 !important;
+        }
+
+        body.dark-mode .bg-gray-50 {
+            background-color: #0f172a !important;
+        }
+
+        body.dark-mode .border-gray-200 {
+            border-color: #1f2937 !important;
+        }
+
+        body.dark-mode .shadow-sm {
+            box-shadow: none !important;
+        }
+
+        body.dark-mode table {
+            color: #e5e7eb;
+        }
+
+        body.dark-mode thead {
+            background-color: #0b1220;
+        }
+
+        body.dark-mode tbody tr:hover {
+            background-color: #111827;
+        }
+
         body.dark-mode input,
         body.dark-mode select,
         body.dark-mode textarea {
@@ -61,33 +101,49 @@
             border-color: #374151;
             color: #e5e7eb;
         }
+
         body.dark-mode input::placeholder,
         body.dark-mode textarea::placeholder {
             color: #94a3b8;
         }
+
         body.dark-mode .bg-blue-600 {
             background-color: #2563eb !important;
             color: #f8fafc !important;
         }
+
         body.dark-mode .hover\:bg-gray-100:hover {
             background-color: #1f2937 !important;
         }
+
         body.dark-mode .hover\:text-blue-600:hover {
             color: #93c5fd !important;
         }
-        body.dark-mode .bg-gray-200 { background-color: #1f2937 !important; }
-        body.dark-mode .bg-gray-100 { background-color: #1f2937 !important; }
-        body.dark-mode .border-gray-300 { border-color: #374151 !important; }
+
+        body.dark-mode .bg-gray-200 {
+            background-color: #1f2937 !important;
+        }
+
+        body.dark-mode .bg-gray-100 {
+            background-color: #1f2937 !important;
+        }
+
+        body.dark-mode .border-gray-300 {
+            border-color: #374151 !important;
+        }
+
         /* Dark Mode: Lastik Ara tablosu hover/selection kapalı, header koyu */
         body.dark-mode .tire-table-row:hover {
             background-color: inherit !important;
             color: inherit !important;
         }
+
         body.dark-mode .tire-table-row:hover td,
         body.dark-mode .tire-table-row:hover span,
         body.dark-mode .tire-table-row:hover div {
             color: inherit !important;
         }
+
         body.dark-mode .tire-table-row.selected,
         body.dark-mode .tire-table-row.selected td,
         body.dark-mode .tire-table-row.selected span,
@@ -96,148 +152,289 @@
             color: inherit !important;
             box-shadow: none !important;
         }
+
         body.dark-mode .tire-table-row {
             background-color: #0f172a !important;
         }
+
         body.dark-mode .tire-table-row td {
             background-color: #0f172a !important;
         }
+
         body.dark-mode .tire-table-header {
             background-color: #0b1220 !important;
             border-color: #1f2937 !important;
         }
+
         body.dark-mode .tire-table thead,
         body.dark-mode .tire-table thead tr {
             background-color: #0b1220 !important;
         }
+
         body.dark-mode .tire-table thead th {
             background-color: #0b1220 !important;
             color: #cbd5e1 !important;
             border-color: #1f2937 !important;
         }
+
         body.dark-mode .tire-table-container {
             background-color: #0f172a !important;
         }
+
         body.dark-mode .tire-table {
             background-color: #0f172a !important;
         }
+
         /* Dark Mode: Lastik Ara - header ve chip renkleri */
         body.dark-mode .tire-table-header th {
             color: #cbd5e1 !important;
             border-color: #1f2937 !important;
         }
+
         body.dark-mode .tire-results-card {
             background-color: #0b1220 !important;
             border-color: #1f2937 !important;
         }
+
         body.dark-mode .tire-results-card h2,
         body.dark-mode .tire-results-card span,
         body.dark-mode .tire-results-card .text-gray-900,
         body.dark-mode .tire-results-card .text-gray-500 {
             color: #e5e7eb !important;
         }
+
         body.dark-mode .brand-chip {
             background-color: #1f2937 !important;
             border-color: #334155 !important;
             color: #e5e7eb !important;
         }
+
         body.dark-mode .season-chip {
             background-color: #14532d !important;
             border-color: #166534 !important;
             color: #ecfdf3 !important;
         }
+
         body.dark-mode .status-chip.status-depoda {
             background-color: #064e3b !important;
             border-color: #0f766e !important;
             color: #ecfdf3 !important;
         }
+
         body.dark-mode .status-chip.status-other {
             background-color: #1d4ed8 !important;
             border-color: #1e3a8a !important;
             color: #e0f2fe !important;
         }
+
         /* Toggle button */
         #dark-mode-toggle .icon-sun,
         #dark-mode-toggle .icon-moon {
             width: 18px;
             height: 18px;
         }
+
         body.dark-mode #dark-mode-toggle {
             color: #e5e7eb;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .toast {
+            pointer-events: auto;
+            min-width: 300px;
+            max-width: 450px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-left: 4px solid transparent;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-left-color: #10b981;
+        }
+
+        .toast.error {
+            border-left-color: #ef4444;
+        }
+
+        .toast.info {
+            border-left-color: #3b82f6;
+        }
+
+        .toast.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .toast-icon {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .toast.success .toast-icon {
+            background: #ecfdf5;
+            color: #10b981;
+        }
+
+        .toast.error .toast-icon {
+            background: #fef2f2;
+            color: #ef4444;
+        }
+
+        .toast.info .toast-icon {
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+
+        .toast.warning .toast-icon {
+            background: #fffbeb;
+            color: #f59e0b;
+        }
+
+        .toast-content {
+            flex-grow: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: #111827;
+        }
+
+        .toast-message {
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+
+        body.dark-mode .toast {
+            background: #111827;
+            border-bottom: 1px solid #374151;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        body.dark-mode .toast-title {
+            color: #f9fafb;
+        }
+
+        body.dark-mode .toast-message {
+            color: #9ca3af;
+        }
+
+        body.dark-mode .toast.success .toast-icon {
+            background: #064e3b;
+            color: #34d399;
+        }
+
+        body.dark-mode .toast.error .toast-icon {
+            background: #7f1d1d;
+            color: #f87171;
+        }
+
+        body.dark-mode .toast.info .toast-icon {
+            background: #1e3a8a;
+            color: #60a5fa;
         }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
+
 <body class="bg-gray-50 min-h-screen flex flex-col">
     <!-- Top Navigation Bar -->
     <nav class="bg-white border-b border-gray-200 shadow-sm">
         <div class="max-w-7xl mx-auto px-6 lg:px-8">
-          <div class="flex items-center h-16">
+            <div class="flex items-center h-16">
 
                 <!-- Logo and Brand -->
-               <div class="flex items-center space-x-2 ml-4">
+                <div class="flex items-center space-x-2 ml-4">
 
                     <div class="flex items-center justify-center w-10 h-10">
-                        <img src="/static/images/Nusretler logo-Photoroom.png" alt="NUSRETLER LASTİK Logo" class="h-10 w-auto object-contain">
+                        <img src="/static/images/Nusretler logo-Photoroom.png" alt="NUSRETLER LASTİK Logo"
+                            class="h-10 w-auto object-contain">
                     </div>
                     <span class="text-xl font-bold text-gray-900">NUSRETLER LASTİK</span>
                 </div>
-                
-  <!-- Navigation -->
-<div class="flex items-center justify-between h-16">
 
-    <!-- SOL: Menü  -->
-    <div class="flex items-center space-x-2">
+                <!-- Navigation -->
+                <div class="flex items-center justify-between h-16">
 
-        <div class="flex items-center space-x-1">
-            <a href="/lastik-ara"
-               class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/lastik-ara' or current_path == '/' %}active{% endif %}">
-                Lastik Ara
-            </a>
-            <a href="/yeni-lastik"
-               class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/yeni-lastik' %}active{% endif %}">
-                Yeni Lastik Girişi
-            </a>
-            <a href="/musteriler"
-               class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/musteriler' %}active{% endif %}">
-                Müşteriler
-            </a>
-            <a href="/raflar"
-               class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/raflar' %}active{% endif %}">
-                Raflar
-            </a>
-            <a href="/lastik-etiketleri"
-               class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/lastik-etiketleri' %}active{% endif %}">
-                Lastik Etiketleri
-            </a>
-            <a href="/musteri-gecmisi"
-               class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/musteri-gecmisi' %}active{% endif %}">
-                Müşteri Geçmişi
-            </a>
-        </div>
-    </div>
+                    <!-- SOL: Menü  -->
+                    <div class="flex items-center space-x-2">
 
-    <!-- SAĞ: Dark + Çıkış -->
-    <div class="flex items-center space-x-2">
-        <button id="dark-mode-toggle"
-                type="button"
-                class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition flex items-center gap-2">
-            <span class="hidden sm:inline">Dark</span>
-            ☀️
-        </button>
+                        <div class="flex items-center space-x-1">
+                            <a href="/lastik-ara"
+                                class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/lastik-ara' or current_path == '/' %}active{% endif %}">
+                                Lastik Ara
+                            </a>
+                            <a href="/yeni-lastik"
+                                class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/yeni-lastik' %}active{% endif %}">
+                                Yeni Lastik Girişi
+                            </a>
+                            <a href="/musteriler"
+                                class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/musteriler' %}active{% endif %}">
+                                Müşteriler
+                            </a>
+                            <a href="/raflar"
+                                class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/raflar' %}active{% endif %}">
+                                Raflar
+                            </a>
+                            <a href="/lastik-etiketleri"
+                                class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/lastik-etiketleri' %}active{% endif %}">
+                                Lastik Etiketleri
+                            </a>
+                            <a href="/musteri-gecmisi"
+                                class="nav-link px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors {% if current_path == '/musteri-gecmisi' %}active{% endif %}">
+                                Müşteri Geçmişi
+                            </a>
+                        </div>
+                    </div>
 
-        <a href="/logout"
-           class="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition whitespace-nowrap">
-            Çıkış
-        </a>
-    </div>
+                    <!-- SAĞ: Dark + Çıkış -->
+                    <div class="flex items-center space-x-2">
+                        <button id="dark-mode-toggle" type="button"
+                            class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition flex items-center gap-2">
+                            <span class="hidden sm:inline">Dark</span>
+                            ☀️
+                        </button>
 
-</div>
-
-
+                        <a href="/logout"
+                            class="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition whitespace-nowrap">
+                            Çıkış
+                        </a>
+                    </div>
 
                 </div>
+
+
+
             </div>
+        </div>
         </div>
     </nav>
 
@@ -253,8 +450,11 @@
         </div>
     </footer>
 
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
     <script>
-        (function() {
+        (function () {
             const storageKey = 'theme';
             const body = document.body;
             const toggleBtn = document.getElementById('dark-mode-toggle');
@@ -289,7 +489,62 @@
 
             applySavedTheme();
         })();
+
+        // Toast Notification Function
+        window.showToast = function (message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            let icon = '';
+            let title = '';
+
+            switch (type) {
+                case 'success':
+                    icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                    title = 'Başarılı';
+                    break;
+                case 'error':
+                    icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+                    title = 'Hata';
+                    break;
+                case 'warning':
+                    icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>';
+                    title = 'Uyarı';
+                    break;
+                default:
+                    icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                    title = 'Bilgi';
+            }
+
+            toast.innerHTML = `
+                <div class="toast-icon">${icon}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            // Force reflow
+            toast.offsetHeight;
+
+            // Show toast
+            toast.classList.add('show');
+
+            // Auto-hide
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    toast.remove();
+                }, 400);
+            }, duration);
+        };
     </script>
     {% block scripts %}{% endblock %}
 </body>
+
 </html>
