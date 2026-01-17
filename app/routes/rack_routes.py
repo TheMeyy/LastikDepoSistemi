@@ -18,87 +18,82 @@ class BulkRackCreate(BaseModel):
 
 @router.post("/bulk", response_model=List[RackRead], status_code=status.HTTP_201_CREATED)
 def create_racks_bulk(bulk_data: BulkRackCreate, db: Session = Depends(get_db)):
-    """Create multiple racks at once (e.g., A1, A2, A3... A8)
+    """Create multiple racks at once (e.g., A-1, A-2, A-3... A-8)
     
-    If racks with the same prefix already exist (e.g., A1-A4), 
-    only create missing ones (e.g., A5-A9 if user requests 9).
+    If racks with the same prefix already exist (e.g., A-1-A-4), 
+    only create missing ones (e.g., A-5-A-9 if user requests 9).
     If requested number is less than existing racks, show warning.
     """
     try:
-        # Find existing racks with the same prefix
-        existing_racks = db.query(Rack).filter(
-            Rack.kod.like(f"{bulk_data.raf_adi}%")
-        ).all()
+        # Check both old format (A1) and new format (A-1)
+        # New format check: RAF_ADI + "-"
+        pattern = f"{bulk_data.raf_adi}-"
+        existing_racks_new = db.query(Rack).filter(Rack.kod.like(f"{pattern}%")).all()
         
-        # Extract existing numbers from rack codes
+        # Old format check: RAF_ADI (without hyphen)
+        existing_racks_old = db.query(Rack).filter(Rack.kod.like(f"{bulk_data.raf_adi}%")).all()
+        
         existing_numbers = []
-        for rack in existing_racks:
+        
+        # Extract from new format: "A-4" -> 4
+        for rack in existing_racks_new:
             try:
-                # Try to extract number from code (e.g., "A4" -> 4)
+                code_suffix = rack.kod[len(pattern):]
+                if code_suffix.isdigit():
+                    existing_numbers.append(int(code_suffix))
+            except (ValueError, IndexError):
+                continue
+        
+        # Extract from old format (legacy support): "A4" -> 4
+        for rack in existing_racks_old:
+            if "-" in rack.kod: # Skip new format as it's already processed
+                continue
+            try:
                 code_suffix = rack.kod[len(bulk_data.raf_adi):]
                 if code_suffix.isdigit():
                     existing_numbers.append(int(code_suffix))
             except (ValueError, IndexError):
-                # If code doesn't match pattern, skip it
                 continue
         
         # Find the maximum existing number
         max_existing = max(existing_numbers) if existing_numbers else 0
         
-        # Check if requested number is less than existing
-        if bulk_data.sayi < max_existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Bu raf zaten mevcut veya dolu. '{bulk_data.raf_adi}' için en yüksek numara {max_existing}. Lütfen {max_existing + 1} veya daha büyük bir sayı girin."
-            )
-        
-        # Create only missing racks
+        # Create only missing racks (always using new format with hyphen)
         created_racks = []
-        start_num = max_existing + 1 if existing_numbers else 1
+        start_num = max_existing + 1
         
         for i in range(start_num, bulk_data.sayi + 1):
-            rack_code = f"{bulk_data.raf_adi}{i}"
+            rack_code = f"{bulk_data.raf_adi}-{i}"
             
-            # Double-check if rack code already exists (safety check)
+            # Double-check if rack code already exists
             existing_rack = db.query(Rack).filter(Rack.kod == rack_code).first()
             if existing_rack:
-                # This shouldn't happen, but handle gracefully
                 continue
             
             db_rack = Rack(
                 kod=rack_code,
-                durum=RackDurumEnum.BOS,  # Always start as empty
+                durum=RackDurumEnum.BOS,
                 not_=None
             )
             db.add(db_rack)
             created_racks.append(db_rack)
         
-        # If no new racks to create, inform user
-        if not created_racks:
-            if existing_numbers:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"'{bulk_data.raf_adi}' için {bulk_data.sayi} adet raf zaten mevcut. En yüksek numara: {max_existing}"
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Raf oluşturulamadı. Lütfen geçerli bir raf adı ve sayı girin."
-                )
+        if not created_racks and bulk_data.sayi <= max_existing:
+             raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"'{bulk_data.raf_adi}' için {bulk_data.sayi} adet raf zaten mevcut. En yüksek numara: {max_existing}"
+            )
         
         db.commit()
         
-        # Refresh all created racks
         for rack in created_racks:
             db.refresh(rack)
         
         return created_racks
     
     except HTTPException:
-        # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
-        # Rollback on any unexpected error
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -106,7 +101,90 @@ def create_racks_bulk(bulk_data: BulkRackCreate, db: Session = Depends(get_db)):
         )
 
 
-@router.post("/", response_model=RackRead, status_code=status.HTTP_201_CREATED)
+class BulkRackDelete(BaseModel):
+    """Schema for bulk deleting racks"""
+    rack_ids: List[int]
+
+
+@router.delete("/bulk", status_code=status.HTTP_204_NO_CONTENT)
+def delete_racks_bulk(data: BulkRackDelete, db: Session = Depends(get_db)):
+    """Delete multiple racks at once - only empty and never-used racks can be deleted"""
+    from app.models.models import Tire
+    
+    try:
+        racks = db.query(Rack).filter(Rack.id.in_(data.rack_ids)).all()
+        
+        if not racks:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Silinecek raf bulunamadı."
+            )
+            
+        for rack in racks:
+            # Check if ANY tire is associated with this rack (even old/exited ones)
+            # This is for 'Seri numarası bulunan raf silinemez' and FK safety
+            tire_exists = db.query(Tire).filter(Tire.raf_id == rack.id).first()
+            if tire_exists:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"'{rack.kod}' rafı sistemde kayıtlı olduğu için (dolu veya geçmişte kullanılmış) silinemez."
+                )
+            
+            # Check if rack status is "Dolu"
+            if rack.durum == RackDurumEnum.DOLU:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"'{rack.kod}' rafı dolu olduğu için silinemez."
+                )
+        
+        # All checks passed, delete them
+        for rack in racks:
+            db.delete(rack)
+            
+        db.commit()
+        return None
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Raflar silinirken bir hata oluştu: {str(e)}"
+        )
+
+
+@router.delete("/{rack_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_rack(rack_id: int, db: Session = Depends(get_db)):
+    """Delete a rack - only empty and never-used racks can be deleted"""
+    from app.models.models import Tire
+    
+    db_rack = db.query(Rack).filter(Rack.id == rack_id).first()
+    if not db_rack:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Rack with ID {rack_id} not found"
+        )
+    
+    # Check if ANY tire is associated with this rack
+    tire_exists = db.query(Tire).filter(Tire.raf_id == rack_id).first()
+    if tire_exists:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bu raf kayıtlı lastik içerdiği veya geçmişte kullanıldığı için silinemez."
+        )
+    
+    # Check if rack status is "Dolu"
+    if db_rack.durum == RackDurumEnum.DOLU:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bu raf dolu olduğu için silinemez."
+        )
+    
+    db.delete(db_rack)
+    db.commit()
+    return None
+
 def create_rack(rack: RackCreate, db: Session = Depends(get_db)):
     """Create a new rack"""
     # Check if rack code already exists

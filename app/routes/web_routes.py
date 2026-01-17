@@ -1043,59 +1043,6 @@ async def lastik_etiketleri(
                 print(f"Error converting tire.durum in lastik_etiketleri: {e}")
                 durum_display = "Depoda"
             
-            # Collect all tire sizes / brands / mevsims (per tire)
-            mevsim_display = ""  # ensure initialized before use
-            tire_sizes = []
-            tire_brands = []
-            tire_mevsims = []
-            for i in range(1, 7):
-                size = getattr(tire, f'tire{i}_size', None)
-                brand_i = getattr(tire, f'tire{i}_brand', None)
-                mevsim_i = getattr(tire, f'tire{i}_mevsim', None)
-                if size and str(size).strip():
-                    tire_sizes.append(str(size).strip())
-                    # Brand
-                    if brand_i and str(brand_i).strip():
-                        tire_brands.append(str(brand_i).strip())
-                    elif tire.brand and tire.brand.marka_adi:
-                        tire_brands.append(str(tire.brand.marka_adi).strip())
-                    else:
-                        tire_brands.append("")
-                    # Mevsim
-                    if mevsim_i:
-                        if hasattr(mevsim_i, 'value'):
-                            tire_mevsims.append(str(mevsim_i.value))
-                        else:
-                            tire_mevsims.append(str(mevsim_i))
-                    elif mevsim_display:
-                        tire_mevsims.append(mevsim_display)
-                    else:
-                        tire_mevsims.append("")
-            
-            # If no tire sizes found in tire1-tire6, use legacy ebat field
-            if not tire_sizes and tire.ebat:
-                tire_sizes.append(str(tire.ebat).strip())
-                tire_brands.append(str(tire.brand.marka_adi).strip() if tire.brand else "")
-                tire_mevsims.append(mevsim_display or (tire.mevsim.value if hasattr(tire.mevsim, 'value') else str(tire.mevsim) if tire.mevsim else ""))
-            
-            # Get rack code
-            rack_code = tire.rack.kod if tire.rack else ""
-            
-            # Get dis durumu (tire condition)
-            dis_durumu_display = ""
-            try:
-                dis_durumu_raw = getattr(tire, 'dis_durumu', None)
-                if dis_durumu_raw:
-                    if isinstance(dis_durumu_raw, ModelDisDurumuEnum):
-                        dis_durumu_display = dis_durumu_raw.value
-                    elif isinstance(dis_durumu_raw, str):
-                        dis_durumu_display = dis_durumu_raw
-                    elif hasattr(dis_durumu_raw, 'value'):
-                        dis_durumu_display = dis_durumu_raw.value
-            except Exception as e:
-                print(f"Error converting dis_durumu: {e}")
-                dis_durumu_display = ""
-            
             # Get mevsim (season) value - convert enum to display string
             mevsim_display = ""
             try:
@@ -1131,18 +1078,70 @@ async def lastik_etiketleri(
                             else:
                                 mevsim_display = extracted_value
                         elif 'YAZ' in mevsim_str_upper:
-                            mevsim_display = "Yaz"
+                                mevsim_display = "Yaz"
                         elif 'KIS' in mevsim_str_upper or 'KIŞ' in mevsim_str_upper:
-                            mevsim_display = "Kış"
+                                mevsim_display = "Kış"
                         elif 'DORT_MEVSIM' in mevsim_str_upper or '4 MEVSIM' in mevsim_str_upper or ('4' in mevsim_str_upper and 'MEVSIM' in mevsim_str_upper):
-                            mevsim_display = "4 Mevsim"
+                                mevsim_display = "4 Mevsim"
                         else:
-                            # Last resort: use string representation but clean it up
-                            mevsim_display = mevsim_str
+                                # Last resort: use string representation but clean it up
+                                mevsim_display = mevsim_str
             except Exception as e:
-                print(f"Error converting tire.mevsim: {e}, type: {type(getattr(tire, 'mevsim', None))}, value: {getattr(tire, 'mevsim', None)}")
+                print(f"Error converting tire.mevsim: {e}")
                 mevsim_display = ""
+
+            # Collect all tire sizes / brands / mevsims (per tire)
+            tire_sizes = []
+            tire_brands = []
+            tire_mevsims = []
             
+            # First, check tire1 through tire6
+            for i in range(1, 7):
+                s = getattr(tire, f'tire{i}_size', None)
+                b = getattr(tire, f'tire{i}_brand', None)
+                m = getattr(tire, f'tire{i}_mevsim', None)
+                
+                # ONLY count rows where there's an actual SIZE
+                if s and str(s).strip():
+                    tire_sizes.append(str(s).strip())
+                    
+                    # Brand fallback: tire_i_brand -> default brand
+                    brand_val = str(b).strip() if b and str(b).strip() else (str(tire.brand.marka_adi).strip() if tire.brand else "")
+                    tire_brands.append(brand_val)
+                    
+                    # Mevsim fallback: tire_i_mevsim -> default mevsim
+                    mevsim_val = ""
+                    if m:
+                        mevsim_val = m.value if hasattr(m, 'value') else str(m)
+                    else:
+                        mevsim_val = mevsim_display # Use the already calculated general mevsim_display
+                    tire_mevsims.append(mevsim_val)
+            
+            # If still no tire rows found, use legacy fields as a single row
+            if not tire_sizes and tire.ebat:
+                tire_sizes.append(str(tire.ebat).strip())
+                tire_brands.append(str(tire.brand.marka_adi).strip() if tire.brand else "")
+                tire_mevsims.append(mevsim_display)
+            
+            # Get rack code
+            rack_code = tire.rack.kod if tire.rack else ""
+            
+            # Get dis durumu (tire condition)
+            dis_durumu_display = ""
+            try:
+                dis_durumu_raw = getattr(tire, 'dis_durumu', None)
+                if dis_durumu_raw:
+                    from app.models.models import DisDurumuEnum as ModelDisDurumuEnum
+                    if isinstance(dis_durumu_raw, ModelDisDurumuEnum):
+                        dis_durumu_display = dis_durumu_raw.value
+                    elif isinstance(dis_durumu_raw, str):
+                        dis_durumu_display = dis_durumu_raw
+                    elif hasattr(dis_durumu_raw, 'value'):
+                        dis_durumu_display = dis_durumu_raw.value
+            except Exception as e:
+                print(f"Error converting dis_durumu: {e}")
+                dis_durumu_display = ""
+
             import json
             tire_list.append({
                 "id": tire.id,

@@ -476,9 +476,9 @@
                         window.tireBrandsData = window.tireBrandsData || {};
                         window.tireMevsimsData = window.tireMevsimsData || {};
                         {% for tire in tires %}
-                        window.tireSizesData[{{ tire.id }}] = {{ tire.tire_sizes | tojson | safe }};
-                        window.tireBrandsData[{{ tire.id }}] = {{ tire.tire_brands | tojson | safe }};
-                        window.tireMevsimsData[{{ tire.id }}] = {{ tire.tire_mevsims | tojson | safe }};
+                        window.tireSizesData[{{ tire.id }}] = { { tire.tire_sizes | tojson | safe } };
+                        window.tireBrandsData[{{ tire.id }}] = { { tire.tire_brands | tojson | safe } };
+                        window.tireMevsimsData[{{ tire.id }}] = { { tire.tire_mevsims | tojson | safe } };
                         {% endfor %}
                     </script>
                     {% for tire in tires %}
