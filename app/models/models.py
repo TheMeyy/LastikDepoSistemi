@@ -88,7 +88,7 @@ class Tire(Base):
     mevsim = Column(Enum(MevsimEnum), nullable=False)
     dis_durumu = Column(Enum(DisDurumuEnum), nullable=False)
     not_ = Column("not", Text, nullable=True)
-    raf_id = Column(Integer, ForeignKey("racks.id"), nullable=False)
+    raf_id = Column(Integer, ForeignKey("racks.id"), nullable=True)
     giris_tarihi = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     cikis_tarihi = Column(DateTime(timezone=True), nullable=True)
     durum = Column(Enum(TireDurumEnum, native_enum=False, length=20), nullable=False, default=TireDurumEnum.DEPODA)

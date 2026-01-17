@@ -120,24 +120,26 @@ def delete_racks_bulk(data: BulkRackDelete, db: Session = Depends(get_db)):
                 detail="Silinecek raf bulunamadı."
             )
             
+        from app.models.models import Tire, TireDurumEnum as ModelTireDurumEnum
+        
         for rack in racks:
-            # Check if ANY tire is associated with this rack (even old/exited ones)
-            # This is for 'Seri numarası bulunan raf silinemez' and FK safety
-            tire_exists = db.query(Tire).filter(Tire.raf_id == rack.id).first()
-            if tire_exists:
+            # Check if there are any ACTIVE tires in this rack (status "Depoda")
+            active_tires = db.query(Tire).filter(
+                Tire.raf_id == rack.id,
+                Tire.durum == ModelTireDurumEnum.DEPODA
+            ).first()
+            
+            if active_tires:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"'{rack.kod}' rafı sistemde kayıtlı olduğu için (dolu veya geçmişte kullanılmış) silinemez."
+                    detail=f"'{rack.kod}' rafı dolu olduğu için silinemez. Önce içindeki lastikleri çıkarın."
                 )
             
-            # Check if rack status is "Dolu"
-            if rack.durum == RackDurumEnum.DOLU:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"'{rack.kod}' rafı dolu olduğu için silinemez."
-                )
+            # Update historical tire records to remove the rack reference
+            # This is safe because raf_id is now nullable
+            db.query(Tire).filter(Tire.raf_id == rack.id).update({Tire.raf_id: None})
         
-        # All checks passed, delete them
+        # All checks passed and refs cleared, delete them
         for rack in racks:
             db.delete(rack)
             
@@ -156,34 +158,42 @@ def delete_racks_bulk(data: BulkRackDelete, db: Session = Depends(get_db)):
 
 @router.delete("/{rack_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_rack(rack_id: int, db: Session = Depends(get_db)):
-    """Delete a rack - only empty and never-used racks can be deleted"""
-    from app.models.models import Tire
+    """Delete a rack - only currently empty racks can be deleted"""
+    from app.models.models import Tire, TireDurumEnum as ModelTireDurumEnum
     
     db_rack = db.query(Rack).filter(Rack.id == rack_id).first()
     if not db_rack:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Rack with ID {rack_id} not found"
+            detail=f"Raf bulunamadı (ID: {rack_id})"
         )
     
-    # Check if ANY tire is associated with this rack
-    tire_exists = db.query(Tire).filter(Tire.raf_id == rack_id).first()
-    if tire_exists:
+    # Check if there are any ACTIVE tires in this rack (status "Depoda")
+    active_tires = db.query(Tire).filter(
+        Tire.raf_id == rack_id,
+        Tire.durum == ModelTireDurumEnum.DEPODA
+    ).first()
+    
+    if active_tires:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Bu raf kayıtlı lastik içerdiği veya geçmişte kullanıldığı için silinemez."
+            detail=f"'{db_rack.kod}' rafı dolu olduğu için silinemez. Önce içindeki lastikleri çıkarın."
         )
     
-    # Check if rack status is "Dolu"
-    if db_rack.durum == RackDurumEnum.DOLU:
+    try:
+        # Update historical tire records to remove the rack reference
+        db.query(Tire).filter(Tire.raf_id == rack_id).update({Tire.raf_id: None})
+        
+        db.delete(db_rack)
+        db.commit()
+    except Exception as e:
+        db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Bu raf dolu olduğu için silinemez."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Raf silinirken bir hata oluştu: {str(e)}"
         )
-    
-    db.delete(db_rack)
-    db.commit()
     return None
+
 
 def create_rack(rack: RackCreate, db: Session = Depends(get_db)):
     """Create a new rack"""
@@ -256,41 +266,4 @@ def update_rack(
     db.commit()
     db.refresh(db_rack)
     return db_rack
-
-
-@router.delete("/{rack_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_rack(rack_id: int, db: Session = Depends(get_db)):
-    """Delete a rack - only empty racks can be deleted"""
-    from app.models.models import Tire
-    from app.models.models import TireDurumEnum as ModelTireDurumEnum
-    
-    db_rack = db.query(Rack).filter(Rack.id == rack_id).first()
-    if not db_rack:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Rack with ID {rack_id} not found"
-        )
-    
-    # Check if rack is empty (no tires with status "Depoda")
-    tires_in_rack = db.query(Tire).filter(
-        Tire.raf_id == rack_id,
-        Tire.durum == ModelTireDurumEnum.DEPODA
-    ).count()
-    
-    if tires_in_rack > 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Bu raf dolu olduğu için silinemez. Önce içindeki lastikleri çıkarın."
-        )
-    
-    # Check if rack status is "Dolu"
-    if db_rack.durum == RackDurumEnum.DOLU:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Bu raf dolu olduğu için silinemez. Önce içindeki lastikleri çıkarın."
-        )
-    
-    db.delete(db_rack)
-    db.commit()
-    return None
 
