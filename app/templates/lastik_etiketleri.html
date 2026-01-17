@@ -761,7 +761,7 @@
             }
 
             // We show ALL tires on ONE depot label
-            const depotLabelCount = 1;
+            const depotLabelCount = tireSizesArray.length > 0 ? tireSizesArray.length : 1;
             console.log('generateLabels - Counts:', { sizes: tireSizesArray.length, brands: tireBrandsArray.length, mevsims: tireMevsimsArray.length, depotLabels: depotLabelCount });
 
             // Single depot label sizing
@@ -779,7 +779,7 @@
 
             // Depo Etiketleri (1 adet - tüm lastikleri gösterir)
             html += '<div class="mb-4">';
-            html += '<h3 class="text-lg font-semibold text-gray-800 mb-4 text-center no-print">Depo Etiketi (1 adet)</h3>';
+            html += '<h3 class="text-lg font-semibold text-gray-800 mb-4 text-center no-print">Depo Etiketleri (' + depotLabelCount + ' adet)</h3>';
 
             // Calculate grid layout based on count
             let rowCount;
@@ -798,8 +798,8 @@
             // Create grid with proper rows
             html += '<div style="display: grid; grid-template-columns: repeat(' + cols + ', 1fr); gap: ' + labelMargin + '; justify-items: center;">';
 
-            // Create ONE depot label showing ALL tires
-            console.log('Creating 1 depot label with tireSizesArray:', tireSizesArray);
+            // Create depot labels (one per tire)
+            console.log('Creating', depotLabelCount, 'depot labels with tireSizesArray:', tireSizesArray);
             console.log('Data object:', data);
 
             // Ensure data.tireSizes is set to the filtered array
@@ -811,8 +811,10 @@
             // Müşterinin seri numarası - tüm etiketlerde aynı
             const seriNo = data.seriNo || '';
 
-            // Create single depot label with all tires
-            html += createDepoLabel(labelData, labelWidth, labelHeight, seriNo);
+            // Create depot labels
+            for (let i = 0; i < depotLabelCount; i++) {
+                html += createDepoLabel(labelData, labelWidth, labelHeight, seriNo);
+            }
 
             html += '</div>';
             html += '</div>';
