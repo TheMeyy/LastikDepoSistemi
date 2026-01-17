@@ -1497,8 +1497,8 @@
         doc.setFontSize(isDepo ? 9.4 : baseFontSize);
         doc.text('Raf Kodu:', labelX, currentY);
         const badgeText = String(data.rackCode || '');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(isDepo ? 10.4 : 5.2); // Depo için daha büyük
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(isDepo ? 10.4 : (isExpanded ? 13 : 5.2)); // Depo için daha büyük
         doc.text(badgeText, valueX, currentY, { maxWidth: maxValueWidth });
         // restore to normal after
         doc.setFont('helvetica', 'normal');
